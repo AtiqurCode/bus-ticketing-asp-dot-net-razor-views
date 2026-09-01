@@ -1,0 +1,27 @@
+@inject SettingsService Settings
+@inject IStringLocalizer<SharedResource> Loc
+
+<footer class="ftr">
+    <div class="container ftr__inner">
+        <div class="ftr__brand">
+            <strong>@Settings.Current.SiteName</strong>
+            <p class="muted text-sm">@Loc["Footer.Tagline"]</p>
+        </div>
+
+        <nav class="ftr__links" aria-label="Footer">
+            <a href="/search">@Loc["Nav.Search"]</a>
+            <a href="/my-tickets">@Loc["Nav.MyTickets"]</a>
+            <a href="/contact">@Loc["Nav.Contact"]</a>
+            <a href="/staff/login">@Loc["Nav.StaffLogin"]</a>
+        </nav>
+
+        <div class="ftr__support">
+            <span class="muted text-sm">@Loc["Footer.Support"]</span>
+            <a href="tel:@Settings.Current.SupportPhone" class="ftr__phone">@Settings.Current.SupportPhone</a>
+        </div>
+    </div>
+
+    <div class="container ftr__legal">
+        <span class="muted text-sm">© @DateTime.UtcNow.Year @Settings.Current.SiteName. @Loc["Footer.Rights"]</span>
+    </div>
+</footer>

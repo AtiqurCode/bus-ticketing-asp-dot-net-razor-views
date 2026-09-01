@@ -1,0 +1,20 @@
+@page "/contact"
+@inject SettingsService Settings
+@inject IStringLocalizer<SharedResource> Loc
+
+<PageTitle>@Loc["Nav.Contact"]</PageTitle>
+
+<div class="container page stack">
+    <h1>@Loc["Nav.Contact"]</h1>
+    <p class="muted" style="max-width: 52ch;">@Loc["Footer.Tagline"]</p>
+
+    <div class="card" style="max-width: 460px;">
+        <div class="card__body stack">
+            <div>
+                <span class="text-sm muted">@Loc["Footer.Support"]</span><br />
+                <a class="ftr__phone" style="color: var(--green-700); font-size: var(--text-lg); font-weight: 700;"
+                   href="tel:@Settings.Current.SupportPhone">@Settings.Current.SupportPhone</a>
+            </div>
+        </div>
+    </div>
+</div>

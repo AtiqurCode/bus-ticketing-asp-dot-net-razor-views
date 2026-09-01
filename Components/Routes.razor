@@ -1,0 +1,25 @@
+@using BusTicketing.Components.Pages
+@using BusTicketing.Components.Shared
+
+<Router AppAssembly="typeof(Program).Assembly">
+    <Found Context="routeData">
+        <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(MainLayout)">
+            <NotAuthorized Context="authState">
+                <RedirectToLogin />
+            </NotAuthorized>
+            <Authorizing>
+                <div class="route-authorizing">@Loc["Common.Loading"]</div>
+            </Authorizing>
+        </AuthorizeRouteView>
+        <FocusOnNavigate RouteData="routeData" Selector="h1" />
+    </Found>
+    <NotFound>
+        <LayoutView Layout="typeof(MainLayout)">
+            <PageNotFound />
+        </LayoutView>
+    </NotFound>
+</Router>
+
+@code {
+    [Inject] private IStringLocalizer<SharedResource> Loc { get; set; } = default!;
+}

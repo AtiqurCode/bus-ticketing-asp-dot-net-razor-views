@@ -1,0 +1,40 @@
+@inject IStringLocalizer<SharedResource> Loc
+
+<nav class="anav" aria-label="Admin">
+    @foreach (var section in Sections)
+    {
+        <div class="anav__group">
+            @if (section.Heading is not null)
+            {
+                <span class="anav__heading">@section.Heading</span>
+            }
+            @foreach (var item in section.Items)
+            {
+                <AuthorizeView Policy="@(item.SuperAdminOnly ? AuthPolicies.SuperAdmin : AuthPolicies.BackOffice)">
+                    <NavLink class="anav__link" href="@item.Href" Match="item.Match">
+                        <span class="anav__icon" aria-hidden="true">@item.Icon</span>
+                        <span>@item.Label</span>
+                    </NavLink>
+                </AuthorizeView>
+            }
+        </div>
+    }
+</nav>
+
+@code {
+    private IReadOnlyList<NavSection> Sections =>
+    [
+        new(null,
+        [
+            new("/staff", Loc["Admin.Nav.Dashboard"], "▚", NavLinkMatch.All)
+        ])
+        // Route / fleet / schedule / booking sections are added as their
+        // milestones land so every link here always resolves.
+    ];
+
+    private sealed record NavSection(string? Heading, IReadOnlyList<NavItem> Items);
+
+    private sealed record NavItem(
+        string Href, string Label, string Icon,
+        NavLinkMatch Match = NavLinkMatch.Prefix, bool SuperAdminOnly = false);
+}

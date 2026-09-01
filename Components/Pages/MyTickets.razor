@@ -1,0 +1,24 @@
+@page "/my-tickets"
+@inject IStringLocalizer<SharedResource> Loc
+
+<PageTitle>@Loc["Nav.MyTickets"]</PageTitle>
+
+<div class="container page stack">
+    <h1>@Loc["Nav.MyTickets"]</h1>
+    <p class="muted" style="max-width: 52ch;">
+        Enter the phone number you booked with to pull up every upcoming and past trip,
+        re-download tickets, or cancel where the policy allows.
+    </p>
+
+    <div class="card" style="max-width: 460px;">
+        <div class="card__body stack">
+            <div class="field">
+                <label for="phone">Phone number</label>
+                <input id="phone" class="input" type="tel" inputmode="numeric"
+                       placeholder="01XXXXXXXXX" disabled />
+            </div>
+            <button class="btn" disabled>@Loc["Common.Search"]</button>
+            <p class="text-sm muted">Ticket lookup opens once booking goes live.</p>
+        </div>
+    </div>
+</div>

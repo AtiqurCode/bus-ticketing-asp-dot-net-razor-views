@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <data name="Nav.Home" xml:space="preserve"><value>হোম</value></data>
+  <data name="Nav.Search" xml:space="preserve"><value>টিকিট খুঁজুন</value></data>
+  <data name="Nav.MyTickets" xml:space="preserve"><value>আমার টিকিট</value></data>
+  <data name="Nav.Contact" xml:space="preserve"><value>যোগাযোগ</value></data>
+  <data name="Nav.StaffLogin" xml:space="preserve"><value>স্টাফ লগইন</value></data>
+
+  <data name="Common.Search" xml:space="preserve"><value>খুঁজুন</value></data>
+  <data name="Common.From" xml:space="preserve"><value>থেকে</value></data>
+  <data name="Common.To" xml:space="preserve"><value>গন্তব্য</value></data>
+  <data name="Common.Date" xml:space="preserve"><value>তারিখ</value></data>
+  <data name="Common.Loading" xml:space="preserve"><value>লোড হচ্ছে…</value></data>
+  <data name="Common.Cancel" xml:space="preserve"><value>বাতিল</value></data>
+  <data name="Common.Save" xml:space="preserve"><value>সংরক্ষণ</value></data>
+  <data name="Common.Back" xml:space="preserve"><value>ফিরে যান</value></data>
+
+  <data name="Home.Hero.Title" xml:space="preserve"><value>পরবর্তী বাসের আসন, এক মিনিটেই বুক</value></data>
+  <data name="Home.Hero.Subtitle" xml:space="preserve"><value>রেজিস্ট্রেশন লাগবে না। লাইভ সিট ম্যাপে আসন বেছে নিন, অনলাইনে বা কাউন্টারে পরিশোধ করুন, আর QR টিকিট নিয়ে যাত্রা করুন।</value></data>
+  <data name="Home.Search.From" xml:space="preserve"><value>যাত্রা শুরু</value></data>
+  <data name="Home.Search.To" xml:space="preserve"><value>গন্তব্য</value></data>
+  <data name="Home.Search.Date" xml:space="preserve"><value>যাত্রার তারিখ</value></data>
+  <data name="Home.Search.Submit" xml:space="preserve"><value>বাস খুঁজুন</value></data>
+  <data name="Home.Search.Swap" xml:space="preserve"><value>যাত্রা ও গন্তব্য অদলবদল</value></data>
+  <data name="Home.Feature.NoAccount.Title" xml:space="preserve"><value>অ্যাকাউন্ট ছাড়াই, ঝামেলাহীন</value></data>
+  <data name="Home.Feature.NoAccount.Body" xml:space="preserve"><value>শুধু নাম আর ফোন নম্বর দিয়ে বুক করুন। পরে সেই নম্বর দিয়েই সব টিকিট দেখে নিন।</value></data>
+  <data name="Home.Feature.LiveSeat.Title" xml:space="preserve"><value>ঠিক যে আসনটি চান</value></data>
+  <data name="Home.Feature.LiveSeat.Body" xml:space="preserve"><value>রিয়েল-টাইম সিট ম্যাপে খালি আসন দেখায়। চেকআউটের সময় আপনার আসনটি কয়েক মিনিটের জন্য ধরে রাখা হয়।</value></data>
+  <data name="Home.Feature.FlexiblePay.Title" xml:space="preserve"><value>আপনার সুবিধামতো পরিশোধ</value></data>
+  <data name="Home.Feature.FlexiblePay.Body" xml:space="preserve"><value>বিকাশ, নগদ বা রকেট থেকে টাকা পাঠিয়ে ট্রানজেকশন আইডি দিন — অথবা এখন আসন রেখে কাউন্টারে পরিশোধ করুন।</value></data>
+  <data name="Home.Popular.Title" xml:space="preserve"><value>জনপ্রিয় রুট</value></data>
+  <data name="Home.Popular.From" xml:space="preserve"><value>শুরু</value></data>
+
+  <data name="Footer.Tagline" xml:space="preserve"><value>সারা বাংলাদেশে আন্তঃজেলা বাসের টিকিট।</value></data>
+  <data name="Footer.Support" xml:space="preserve"><value>সহায়তা</value></data>
+  <data name="Footer.Rights" xml:space="preserve"><value>সর্বস্বত্ব সংরক্ষিত।</value></data>
+
+  <data name="Language.Label" xml:space="preserve"><value>ভাষা</value></data>
+  <data name="Language.English" xml:space="preserve"><value>English</value></data>
+  <data name="Language.Bangla" xml:space="preserve"><value>বাংলা</value></data>
+
+  <data name="Login.Title" xml:space="preserve"><value>স্টাফ সাইন ইন</value></data>
+  <data name="Login.Intro" xml:space="preserve"><value>শুধু কাউন্টার ও প্রশাসক অ্যাকাউন্টের জন্য।</value></data>
+  <data name="Login.Username" xml:space="preserve"><value>ইউজারনেম</value></data>
+  <data name="Login.Password" xml:space="preserve"><value>পাসওয়ার্ড</value></data>
+  <data name="Login.Remember" xml:space="preserve"><value>সাইন ইন রাখুন</value></data>
+  <data name="Login.Submit" xml:space="preserve"><value>সাইন ইন</value></data>
+  <data name="Login.Failed" xml:space="preserve"><value>ইউজারনেম বা পাসওয়ার্ড ভুল।</value></data>
+  <data name="Login.Disabled" xml:space="preserve"><value>এই অ্যাকাউন্টটি নিষ্ক্রিয় করা হয়েছে। প্রশাসকের সাথে যোগাযোগ করুন।</value></data>
+  <data name="Login.SignOut" xml:space="preserve"><value>সাইন আউট</value></data>
+
+  <data name="Admin.Nav.Dashboard" xml:space="preserve"><value>ড্যাশবোর্ড</value></data>
+  <data name="Admin.Nav.Bookings" xml:space="preserve"><value>বুকিং</value></data>
+  <data name="Admin.Nav.Payments" xml:space="preserve"><value>পেমেন্ট</value></data>
+  <data name="Admin.Nav.Trips" xml:space="preserve"><value>ট্রিপ</value></data>
+  <data name="Admin.Nav.Schedules" xml:space="preserve"><value>সময়সূচি</value></data>
+  <data name="Admin.Nav.Buses" xml:space="preserve"><value>বাস</value></data>
+  <data name="Admin.Nav.Routes" xml:space="preserve"><value>রুট</value></data>
+  <data name="Admin.Nav.Locations" xml:space="preserve"><value>লোকেশন</value></data>
+  <data name="Admin.Nav.Staff" xml:space="preserve"><value>স্টাফ</value></data>
+  <data name="Admin.Nav.Reports" xml:space="preserve"><value>রিপোর্ট</value></data>
+  <data name="Admin.Nav.Settings" xml:space="preserve"><value>সেটিংস</value></data>
+  <data name="Admin.Nav.AuditLog" xml:space="preserve"><value>অডিট লগ</value></data>
+  <data name="Admin.Dashboard.Welcome" xml:space="preserve"><value>স্বাগতম</value></data>
+  <data name="Admin.Dashboard.Placeholder" xml:space="preserve"><value>বুকিং শুরু হলে ড্যাশবোর্ডের উইজেটগুলো এখানে আসবে।</value></data>
+
+  <data name="Error.Title" xml:space="preserve"><value>কিছু একটা সমস্যা হয়েছে</value></data>
+  <data name="Error.Body" xml:space="preserve"><value>পেজটি লোড করা যায়নি। আবার চেষ্টা করুন।</value></data>
+  <data name="NotFound.Title" xml:space="preserve"><value>পেজ পাওয়া যায়নি</value></data>
+  <data name="NotFound.Body" xml:space="preserve"><value>আপনি যে পেজটি খুঁজছেন সেটি নেই বা সরানো হয়েছে।</value></data>
+  <data name="NotFound.Home" xml:space="preserve"><value>হোমে ফিরুন</value></data>
+</root>

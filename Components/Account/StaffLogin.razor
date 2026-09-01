@@ -1,0 +1,115 @@
+@page "/staff/login"
+@layout AuthLayout
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Identity
+@inject SignInManager<StaffUser> SignInManager
+@inject UserManager<StaffUser> UserManager
+@inject NavigationManager Nav
+@inject AuditService Audit
+@inject IStringLocalizer<SharedResource> Loc
+@inject ILogger<StaffLogin> Logger
+
+<PageTitle>@Loc["Login.Title"]</PageTitle>
+
+<div class="card">
+    <div class="card__body stack">
+        <div>
+            <h1>@Loc["Login.Title"]</h1>
+            <p class="muted text-sm">@Loc["Login.Intro"]</p>
+        </div>
+
+        @if (_error is not null)
+        {
+            <div class="alert alert--error" role="alert">@_error</div>
+        }
+
+        <EditForm Model="Input" method="post" OnValidSubmit="SignIn" FormName="staff-login">
+            <DataAnnotationsValidator />
+            <div class="stack">
+                <div class="field">
+                    <label for="username">@Loc["Login.Username"]</label>
+                    <InputText id="username" @bind-Value="Input.Username" class="input"
+                               autocomplete="username" autofocus />
+                    <ValidationMessage For="() => Input.Username" />
+                </div>
+                <div class="field">
+                    <label for="password">@Loc["Login.Password"]</label>
+                    <InputText id="password" type="password" @bind-Value="Input.Password" class="input"
+                               autocomplete="current-password" />
+                    <ValidationMessage For="() => Input.Password" />
+                </div>
+                <label class="checkline">
+                    <InputCheckbox @bind-Value="Input.RememberMe" />
+                    <span>@Loc["Login.Remember"]</span>
+                </label>
+                <button type="submit" class="btn btn--block">@Loc["Login.Submit"]</button>
+            </div>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
+
+    [SupplyParameterFromForm] private LoginInput Input { get; set; } = default!;
+
+    [SupplyParameterFromQuery] private string? ReturnUrl { get; set; }
+
+    private string? _error;
+
+    protected override void OnInitialized()
+    {
+        Input ??= new();
+
+        // Already signed in? Skip straight through.
+        if (HttpMethods.IsGet(HttpContext.Request.Method) && HttpContext.User.Identity?.IsAuthenticated == true)
+            Nav.NavigateTo(SafeReturnUrl());
+    }
+
+    private async Task SignIn()
+    {
+        var user = await UserManager.FindByNameAsync(Input.Username.Trim());
+
+        if (user is { IsActive: false })
+        {
+            _error = Loc["Login.Disabled"];
+            return;
+        }
+
+        var result = await SignInManager.PasswordSignInAsync(
+            Input.Username.Trim(), Input.Password, Input.RememberMe, lockoutOnFailure: true);
+
+        if (!result.Succeeded)
+        {
+            _error = result.IsLockedOut ? Loc["Login.Disabled"] : Loc["Login.Failed"];
+            Logger.LogInformation("Failed staff sign-in for {Username} ({Reason}).",
+                Input.Username, result.ToString());
+            return;
+        }
+
+        user!.LastLoginAt = DateTimeOffset.UtcNow;
+        await UserManager.UpdateAsync(user);
+        await Audit.RecordAsync(AuditActions.StaffLogin, nameof(StaffUser), user.Id.ToString(),
+            $"{user.UserName} signed in", user.Id, user.UserName ?? user.FullName);
+
+        Nav.NavigateTo(SafeReturnUrl());
+    }
+
+    private string SafeReturnUrl()
+    {
+        if (!string.IsNullOrWhiteSpace(ReturnUrl)
+            && Uri.TryCreate(ReturnUrl, UriKind.Relative, out _)
+            && ReturnUrl.StartsWith('/'))
+        {
+            return ReturnUrl;
+        }
+        return "/staff";
+    }
+
+    private sealed class LoginInput
+    {
+        [Required] public string Username { get; set; } = "";
+        [Required] public string Password { get; set; } = "";
+        public bool RememberMe { get; set; }
+    }
+}

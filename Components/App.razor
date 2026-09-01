@@ -1,0 +1,37 @@
+@inject SettingsService Settings
+
+<!DOCTYPE html>
+<html lang="@Culture.TwoLetterISOLanguageName" dir="@Direction">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <base href="/" />
+    <title>@Settings.Current.SiteName</title>
+    <meta name="theme-color" content="#0d5c46" />
+    <meta name="description" content="Book intercity bus tickets across Bangladesh — pick your seat, pay online or at the counter." />
+
+    <link rel="icon" href="favicon.ico" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Hind+Siliguri:wght@400;500;600;700&display=swap" />
+
+    <link rel="stylesheet" href="@Assets["css/app.css"]" />
+    <link rel="stylesheet" href="@Assets["BusTicketing.styles.css"]" />
+    <ImportMap />
+    <HeadOutlet />
+</head>
+
+<body>
+    <Routes />
+    <script src="_framework/blazor.web.js"></script>
+</body>
+
+</html>
+
+@code {
+    private static CultureInfo Culture => CultureInfo.CurrentUICulture;
+
+    private static string Direction => "ltr";
+}

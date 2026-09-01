@@ -1,0 +1,26 @@
+.lang {
+    display: inline-flex;
+    padding: 3px;
+    background: var(--surface-sunken);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-pill);
+}
+
+.lang__opt {
+    min-width: 40px;
+    padding: 0.3rem 0.6rem;
+    border-radius: var(--radius-pill);
+    font-size: var(--text-xs);
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-align: center;
+    color: var(--ink-500);
+}
+
+.lang__opt:hover { text-decoration: none; color: var(--ink-900); }
+
+.lang__opt.is-active {
+    background: var(--surface);
+    color: var(--green-700);
+    box-shadow: var(--shadow-sm);
+}

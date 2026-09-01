@@ -1,0 +1,17 @@
+@inherits LayoutComponentBase
+
+<a class="skip-link" href="#main">@Loc["Common.Back"]</a>
+
+<div class="site">
+    <PublicHeader />
+
+    <main id="main" class="site__main">
+        @Body
+    </main>
+
+    <PublicFooter />
+</div>
+
+@code {
+    [Inject] private IStringLocalizer<SharedResource> Loc { get; set; } = default!;
+}

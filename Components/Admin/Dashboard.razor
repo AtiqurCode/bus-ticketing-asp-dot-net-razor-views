@@ -1,0 +1,21 @@
+@page "/staff"
+@inject IStringLocalizer<SharedResource> Loc
+
+<PageTitle>@Loc["Admin.Nav.Dashboard"]</PageTitle>
+
+<AuthorizeView>
+    <div class="stack">
+        <div>
+            <h1>@Loc["Admin.Dashboard.Welcome"], @context.User.Identity?.Name</h1>
+            <p class="muted">@Loc["Admin.Dashboard.Placeholder"]</p>
+        </div>
+
+        <div class="card">
+            <div class="card__body">
+                <p class="muted text-sm" style="margin: 0;">
+                    Fleet, routes, schedules and booking screens arrive in the coming milestones.
+                </p>
+            </div>
+        </div>
+    </div>
+</AuthorizeView>

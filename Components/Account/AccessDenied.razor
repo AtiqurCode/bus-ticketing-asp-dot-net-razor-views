@@ -1,0 +1,14 @@
+@page "/staff/denied"
+@layout AuthLayout
+@inject IStringLocalizer<SharedResource> Loc
+
+<PageTitle>403</PageTitle>
+
+<div class="card">
+    <div class="card__body stack text-center">
+        <span class="centered__code">403</span>
+        <h1>Not allowed</h1>
+        <p class="muted">Your account doesn't have access to that screen.</p>
+        <a class="btn btn--block" href="/staff">@Loc["Admin.Nav.Dashboard"]</a>
+    </div>
+</div>

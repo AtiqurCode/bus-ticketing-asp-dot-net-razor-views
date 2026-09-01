@@ -1,0 +1,194 @@
+{
+  "divisions": [
+    {
+      "name": "Dhaka",
+      "nameBn": "ঢাকা",
+      "districts": [
+        {
+          "name": "Dhaka",
+          "nameBn": "ঢাকা",
+          "terminals": [
+            { "name": "Gabtoli Bus Terminal", "nameBn": "গাবতলী বাস টার্মিনাল" },
+            { "name": "Sayedabad Bus Terminal", "nameBn": "সায়েদাবাদ বাস টার্মিনাল" },
+            { "name": "Mohakhali Bus Terminal", "nameBn": "মহাখালী বাস টার্মিনাল" },
+            { "name": "Kalyanpur Counter", "nameBn": "কল্যাণপুর কাউন্টার" },
+            { "name": "Arambagh Counter", "nameBn": "আরামবাগ কাউন্টার" }
+          ]
+        },
+        { "name": "Gazipur", "nameBn": "গাজীপুর", "terminals": [
+          { "name": "Chandana Chowrasta", "nameBn": "চান্দনা চৌরাস্তা" },
+          { "name": "Board Bazar", "nameBn": "বোর্ড বাজার" }
+        ] },
+        { "name": "Kishoreganj", "nameBn": "কিশোরগঞ্জ" },
+        { "name": "Manikganj", "nameBn": "মানিকগঞ্জ" },
+        { "name": "Munshiganj", "nameBn": "মুন্সিগঞ্জ" },
+        { "name": "Narayanganj", "nameBn": "নারায়ণগঞ্জ" },
+        { "name": "Narsingdi", "nameBn": "নরসিংদী" },
+        { "name": "Tangail", "nameBn": "টাঙ্গাইল" },
+        { "name": "Faridpur", "nameBn": "ফরিদপুর" },
+        { "name": "Gopalganj", "nameBn": "গোপালগঞ্জ" },
+        { "name": "Madaripur", "nameBn": "মাদারীপুর" },
+        { "name": "Rajbari", "nameBn": "রাজবাড়ী" },
+        { "name": "Shariatpur", "nameBn": "শরীয়তপুর" }
+      ]
+    },
+    {
+      "name": "Chattogram",
+      "nameBn": "চট্টগ্রাম",
+      "districts": [
+        {
+          "name": "Chattogram",
+          "nameBn": "চট্টগ্রাম",
+          "terminals": [
+            { "name": "Dampara Bus Counter", "nameBn": "দামপাড়া বাস কাউন্টার" },
+            { "name": "A. K. Khan Bus Stop", "nameBn": "একে খান বাস স্টপ" },
+            { "name": "Bahaddarhat Bus Terminal", "nameBn": "বহদ্দারহাট বাস টার্মিনাল" },
+            { "name": "Oxygen Mor", "nameBn": "অক্সিজেন মোড়" }
+          ]
+        },
+        { "name": "Cox's Bazar", "nameBn": "কক্সবাজার", "terminals": [
+          { "name": "Cox's Bazar Bus Terminal", "nameBn": "কক্সবাজার বাস টার্মিনাল" },
+          { "name": "Kolatoli Counter", "nameBn": "কলাতলী কাউন্টার" }
+        ] },
+        { "name": "Cumilla", "nameBn": "কুমিল্লা", "terminals": [
+          { "name": "Cumilla Cantonment (Padua)", "nameBn": "কুমিল্লা ক্যান্টনমেন্ট (পদুয়া)" },
+          { "name": "Jangalia Bus Terminal", "nameBn": "জাঙ্গালিয়া বাস টার্মিনাল" }
+        ] },
+        { "name": "Brahmanbaria", "nameBn": "ব্রাহ্মণবাড়িয়া" },
+        { "name": "Chandpur", "nameBn": "চাঁদপুর" },
+        { "name": "Feni", "nameBn": "ফেনী", "terminals": [
+          { "name": "Mohipal Bus Stand", "nameBn": "মহিপাল বাস স্ট্যান্ড" }
+        ] },
+        { "name": "Khagrachhari", "nameBn": "খাগড়াছড়ি" },
+        { "name": "Bandarban", "nameBn": "বান্দরবান" },
+        { "name": "Rangamati", "nameBn": "রাঙ্গামাটি" },
+        { "name": "Noakhali", "nameBn": "নোয়াখালী", "terminals": [
+          { "name": "Maijdee Bus Stand", "nameBn": "মাইজদী বাস স্ট্যান্ড" },
+          { "name": "Chowmuhani Counter", "nameBn": "চৌমুহনী কাউন্টার" }
+        ] },
+        { "name": "Lakshmipur", "nameBn": "লক্ষ্মীপুর" }
+      ]
+    },
+    {
+      "name": "Rajshahi",
+      "nameBn": "রাজশাহী",
+      "districts": [
+        {
+          "name": "Rajshahi",
+          "nameBn": "রাজশাহী",
+          "terminals": [
+            { "name": "Rajshahi Central Bus Terminal", "nameBn": "রাজশাহী কেন্দ্রীয় বাস টার্মিনাল" },
+            { "name": "Shiroil Bus Terminal", "nameBn": "শিরোইল বাস টার্মিনাল" }
+          ]
+        },
+        { "name": "Bogura", "nameBn": "বগুড়া", "terminals": [
+          { "name": "Charmatha Bus Terminal", "nameBn": "চারমাথা বাস টার্মিনাল" }
+        ] },
+        { "name": "Joypurhat", "nameBn": "জয়পুরহাট" },
+        { "name": "Naogaon", "nameBn": "নওগাঁ" },
+        { "name": "Natore", "nameBn": "নাটোর" },
+        { "name": "Chapainawabganj", "nameBn": "চাঁপাইনবাবগঞ্জ" },
+        { "name": "Pabna", "nameBn": "পাবনা" },
+        { "name": "Sirajganj", "nameBn": "সিরাজগঞ্জ" }
+      ]
+    },
+    {
+      "name": "Khulna",
+      "nameBn": "খুলনা",
+      "districts": [
+        {
+          "name": "Khulna",
+          "nameBn": "খুলনা",
+          "terminals": [
+            { "name": "Sonadanga Bus Terminal", "nameBn": "সোনাডাঙ্গা বাস টার্মিনাল" },
+            { "name": "Royal Mor Counter", "nameBn": "রয়েল মোড় কাউন্টার" }
+          ]
+        },
+        { "name": "Bagerhat", "nameBn": "বাগেরহাট" },
+        { "name": "Chuadanga", "nameBn": "চুয়াডাঙ্গা" },
+        { "name": "Jashore", "nameBn": "যশোর", "terminals": [
+          { "name": "Jashore Central Bus Terminal", "nameBn": "যশোর কেন্দ্রীয় বাস টার্মিনাল" }
+        ] },
+        { "name": "Jhenaidah", "nameBn": "ঝিনাইদহ" },
+        { "name": "Kushtia", "nameBn": "কুষ্টিয়া" },
+        { "name": "Magura", "nameBn": "মাগুরা" },
+        { "name": "Meherpur", "nameBn": "মেহেরপুর" },
+        { "name": "Narail", "nameBn": "নড়াইল" },
+        { "name": "Satkhira", "nameBn": "সাতক্ষীরা" }
+      ]
+    },
+    {
+      "name": "Barishal",
+      "nameBn": "বরিশাল",
+      "districts": [
+        {
+          "name": "Barishal",
+          "nameBn": "বরিশাল",
+          "terminals": [
+            { "name": "Nathullabad Bus Terminal", "nameBn": "নথুল্লাবাদ বাস টার্মিনাল" },
+            { "name": "Rupatoli Bus Terminal", "nameBn": "রূপাতলী বাস টার্মিনাল" }
+          ]
+        },
+        { "name": "Barguna", "nameBn": "বরগুনা" },
+        { "name": "Bhola", "nameBn": "ভোলা" },
+        { "name": "Jhalokati", "nameBn": "ঝালকাঠি" },
+        { "name": "Patuakhali", "nameBn": "পটুয়াখালী" },
+        { "name": "Pirojpur", "nameBn": "পিরোজপুর" }
+      ]
+    },
+    {
+      "name": "Sylhet",
+      "nameBn": "সিলেট",
+      "districts": [
+        {
+          "name": "Sylhet",
+          "nameBn": "সিলেট",
+          "terminals": [
+            { "name": "Kadamtali Bus Terminal", "nameBn": "কদমতলী বাস টার্মিনাল" },
+            { "name": "Kumargaon Bus Stand", "nameBn": "কুমারগাঁও বাস স্ট্যান্ড" }
+          ]
+        },
+        { "name": "Habiganj", "nameBn": "হবিগঞ্জ" },
+        { "name": "Moulvibazar", "nameBn": "মৌলভীবাজার" },
+        { "name": "Sunamganj", "nameBn": "সুনামগঞ্জ" }
+      ]
+    },
+    {
+      "name": "Rangpur",
+      "nameBn": "রংপুর",
+      "districts": [
+        {
+          "name": "Rangpur",
+          "nameBn": "রংপুর",
+          "terminals": [
+            { "name": "Kamarpara Bus Terminal", "nameBn": "কামারপাড়া বাস টার্মিনাল" },
+            { "name": "Modern Mor Counter", "nameBn": "মডার্ন মোড় কাউন্টার" }
+          ]
+        },
+        { "name": "Dinajpur", "nameBn": "দিনাজপুর" },
+        { "name": "Gaibandha", "nameBn": "গাইবান্ধা" },
+        { "name": "Kurigram", "nameBn": "কুড়িগ্রাম" },
+        { "name": "Lalmonirhat", "nameBn": "লালমনিরহাট" },
+        { "name": "Nilphamari", "nameBn": "নীলফামারী" },
+        { "name": "Panchagarh", "nameBn": "পঞ্চগড়" },
+        { "name": "Thakurgaon", "nameBn": "ঠাকুরগাঁও" }
+      ]
+    },
+    {
+      "name": "Mymensingh",
+      "nameBn": "ময়মনসিংহ",
+      "districts": [
+        {
+          "name": "Mymensingh",
+          "nameBn": "ময়মনসিংহ",
+          "terminals": [
+            { "name": "Mashkanda Bus Terminal", "nameBn": "মাসকান্দা বাস টার্মিনাল" }
+          ]
+        },
+        { "name": "Jamalpur", "nameBn": "জামালপুর" },
+        { "name": "Netrokona", "nameBn": "নেত্রকোণা" },
+        { "name": "Sherpur", "nameBn": "শেরপুর" }
+      ]
+    }
+  ]
+}

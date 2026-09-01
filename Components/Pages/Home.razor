@@ -1,0 +1,135 @@
+@page "/"
+@inject IDbContextFactory<BusTicketing.Data.AppDbContext> DbFactory
+@inject IStringLocalizer<SharedResource> Loc
+@inject IAppClock Clock
+
+<PageTitle>@Settings.Current.SiteName</PageTitle>
+
+<section class="hero">
+    <div class="container hero__grid">
+        <div class="hero__copy">
+            <h1>@Loc["Home.Hero.Title"]</h1>
+            <p class="hero__lede">@Loc["Home.Hero.Subtitle"]</p>
+        </div>
+
+        <form class="searchbox card" method="get" action="/search">
+            <div class="searchbox__row">
+                <div class="field">
+                    <label for="from">@Loc["Home.Search.From"]</label>
+                    <input id="from" name="from" class="input" list="loc-list"
+                           autocomplete="off" required placeholder="Dhaka" />
+                </div>
+                <div class="field">
+                    <label for="to">@Loc["Home.Search.To"]</label>
+                    <input id="to" name="to" class="input" list="loc-list"
+                           autocomplete="off" required placeholder="Chattogram" />
+                </div>
+            </div>
+
+            <datalist id="loc-list">
+                @foreach (var name in _cityNames)
+                {
+                    <option value="@name"></option>
+                }
+            </datalist>
+
+            <div class="searchbox__row">
+                <div class="field">
+                    <label for="date">@Loc["Home.Search.Date"]</label>
+                    <input id="date" name="date" type="date" class="input"
+                           value="@_today" min="@_today" max="@_maxDate" />
+                </div>
+                <button type="submit" class="btn btn--accent btn--lg searchbox__submit">
+                    @Loc["Home.Search.Submit"]
+                </button>
+            </div>
+        </form>
+    </div>
+</section>
+
+<section class="container page features">
+    <article class="feature">
+        <span class="feature__icon" aria-hidden="true">🎫</span>
+        <h3>@Loc["Home.Feature.NoAccount.Title"]</h3>
+        <p class="muted">@Loc["Home.Feature.NoAccount.Body"]</p>
+    </article>
+    <article class="feature">
+        <span class="feature__icon" aria-hidden="true">💺</span>
+        <h3>@Loc["Home.Feature.LiveSeat.Title"]</h3>
+        <p class="muted">@Loc["Home.Feature.LiveSeat.Body"]</p>
+    </article>
+    <article class="feature">
+        <span class="feature__icon" aria-hidden="true">📱</span>
+        <h3>@Loc["Home.Feature.FlexiblePay.Title"]</h3>
+        <p class="muted">@Loc["Home.Feature.FlexiblePay.Body"]</p>
+    </article>
+</section>
+
+@if (_popularRoutes.Count > 0)
+{
+    <section class="container page">
+        <h2>@Loc["Home.Popular.Title"]</h2>
+        <div class="routes">
+            @foreach (var route in _popularRoutes)
+            {
+                <a class="route-card" href="@route.SearchUrl">
+                    <span class="route-card__pair">
+                        <span>@route.From</span>
+                        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+                            <path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2"
+                                  fill="none" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                        <span>@route.To</span>
+                    </span>
+                    @if (route.FromFare is { } fare)
+                    {
+                        <span class="route-card__fare muted text-sm">
+                            @Loc["Home.Popular.From"] ৳@fare.ToString("0")
+                        </span>
+                    }
+                </a>
+            }
+        </div>
+    </section>
+}
+
+@code {
+    [Inject] private SettingsService Settings { get; set; } = default!;
+
+    private List<string> _cityNames = [];
+    private List<PopularRoute> _popularRoutes = [];
+    private string _today = "";
+    private string _maxDate = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var today = Clock.LocalToday;
+        _today = today.ToString("yyyy-MM-dd");
+        _maxDate = today.AddDays(Settings.Current.GenerationWindowDays).ToString("yyyy-MM-dd");
+
+        await using var db = await DbFactory.CreateDbContextAsync();
+
+        _cityNames = await db.Locations
+            .Where(l => l.IsActive)
+            .Select(l => l.Name)
+            .Distinct()
+            .OrderBy(name => name)
+            .ToListAsync();
+
+        _popularRoutes = await db.Routes
+            .Where(r => r.IsActive)
+            .OrderByDescending(r => r.Trips.Count)
+            .Take(6)
+            .Select(r => new PopularRoute(
+                r.OriginLocation.Name,
+                r.DestinationLocation.Name,
+                r.ScheduleTemplates.Where(s => s.IsActive).Min(s => (decimal?)s.Fare)))
+            .ToListAsync();
+    }
+
+    private sealed record PopularRoute(string From, string To, decimal? FromFare)
+    {
+        public string SearchUrl =>
+            $"/search?from={Uri.EscapeDataString(From)}&to={Uri.EscapeDataString(To)}";
+    }
+}

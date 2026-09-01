@@ -1,0 +1,37 @@
+@page "/staff/logout"
+@layout AuthLayout
+@using Microsoft.AspNetCore.Identity
+@attribute [Authorize(Policy = AuthPolicies.BackOffice)]
+@inject SignInManager<StaffUser> SignInManager
+@inject NavigationManager Nav
+@inject IStringLocalizer<SharedResource> Loc
+
+<PageTitle>@Loc["Login.SignOut"]</PageTitle>
+
+<div class="card">
+    <div class="card__body stack">
+        <h1>@Loc["Login.SignOut"]</h1>
+        <p class="muted">@_name</p>
+
+        <EditForm Model="this" method="post" OnValidSubmit="SignOut" FormName="staff-logout">
+            <div class="stack">
+                <button type="submit" class="btn btn--block">@Loc["Login.SignOut"]</button>
+                <a class="btn btn--ghost btn--block" href="/staff">@Loc["Common.Cancel"]</a>
+            </div>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
+
+    private string? _name;
+
+    protected override void OnInitialized() => _name = HttpContext.User.Identity?.Name;
+
+    private async Task SignOut()
+    {
+        await SignInManager.SignOutAsync();
+        Nav.NavigateTo("/", forceLoad: true);
+    }
+}

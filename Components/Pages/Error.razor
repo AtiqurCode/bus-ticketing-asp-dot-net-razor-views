@@ -1,0 +1,31 @@
+@page "/error"
+@using Microsoft.AspNetCore.Components.Web
+@inject IStringLocalizer<SharedResource> Loc
+
+<PageTitle>@Loc["Error.Title"]</PageTitle>
+
+<div class="container page centered">
+    <div class="centered__inner">
+        <h1>@Loc["Error.Title"]</h1>
+        <p class="muted">@Loc["Error.Body"]</p>
+
+        @if (ShowRequestId)
+        {
+            <p class="text-sm muted">
+                Request ID: <code>@RequestId</code>
+            </p>
+        }
+
+        <a class="btn" href="/">@Loc["NotFound.Home"]</a>
+    </div>
+</div>
+
+@code {
+    [CascadingParameter] private HttpContext? HttpContext { get; set; }
+
+    private string? RequestId { get; set; }
+    private bool ShowRequestId => !string.IsNullOrEmpty(RequestId);
+
+    protected override void OnInitialized() =>
+        RequestId = Activity.Current?.Id ?? HttpContext?.TraceIdentifier;
+}

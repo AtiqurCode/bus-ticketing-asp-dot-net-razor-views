@@ -1,0 +1,47 @@
+@inherits LayoutComponentBase
+@inject SettingsService Settings
+@inject IStringLocalizer<SharedResource> Loc
+
+<div class="admin">
+    <input type="checkbox" id="admin-nav-toggle" class="admin__nav-state" hidden />
+
+    <aside class="admin__sidebar">
+        <a href="/staff" class="admin__brand">
+            <span class="admin__mark" aria-hidden="true">TB</span>
+            <span>@Settings.Current.SiteName</span>
+        </a>
+        <AdminNav />
+    </aside>
+
+    <div class="admin__body">
+        <header class="admin__topbar">
+            <label for="admin-nav-toggle" class="admin__burger" aria-label="Toggle navigation">
+                <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+                    <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/>
+                </svg>
+            </label>
+
+            <div class="admin__topbar-spacer"></div>
+
+            <LanguageSwitcher />
+
+            <AuthorizeView>
+                <div class="admin__user">
+                    <span class="admin__user-name">@context.User.Identity?.Name</span>
+                    <span class="admin__user-role badge">@RoleLabel(context.User)</span>
+                </div>
+            </AuthorizeView>
+
+            <a href="/staff/logout" class="admin__signout">@Loc["Login.SignOut"]</a>
+        </header>
+
+        <main class="admin__content">
+            @Body
+        </main>
+    </div>
+</div>
+
+@code {
+    private static string RoleLabel(System.Security.Claims.ClaimsPrincipal user) =>
+        user.IsInRole(Roles.SuperAdmin) ? "Super admin" : "Counter staff";
+}

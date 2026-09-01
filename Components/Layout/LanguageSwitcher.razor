@@ -1,0 +1,25 @@
+@inject NavigationManager Nav
+@inject IStringLocalizer<SharedResource> Loc
+
+<div class="lang" role="group" aria-label="@Loc["Language.Label"]">
+    <a class="lang__opt @(IsActive("en") ? "is-active" : "")"
+       href="@SwitchUrl("en")"
+       hreflang="en"
+       aria-current="@(IsActive("en") ? "true" : "false")">EN</a>
+    <a class="lang__opt @(IsActive("bn") ? "is-active" : "")"
+       href="@SwitchUrl("bn")"
+       hreflang="bn"
+       aria-current="@(IsActive("bn") ? "true" : "false")">বাং</a>
+</div>
+
+@code {
+    private string Current => CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+
+    private bool IsActive(string culture) => Current == culture;
+
+    private string SwitchUrl(string culture)
+    {
+        var here = "/" + Nav.ToBaseRelativePath(Nav.Uri);
+        return $"/culture/set?culture={culture}&redirectUri={Uri.EscapeDataString(here)}";
+    }
+}

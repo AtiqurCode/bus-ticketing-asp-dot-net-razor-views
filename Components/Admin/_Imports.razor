@@ -1,0 +1,5 @@
+@using BusTicketing.Components.Admin
+@using BusTicketing.Data
+@using Microsoft.EntityFrameworkCore
+@layout AdminLayout
+@attribute [Authorize(Policy = AuthPolicies.BackOffice)]

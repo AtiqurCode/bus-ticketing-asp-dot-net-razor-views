@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <data name="Nav.Home" xml:space="preserve"><value>Home</value></data>
+  <data name="Nav.Search" xml:space="preserve"><value>Search trips</value></data>
+  <data name="Nav.MyTickets" xml:space="preserve"><value>My tickets</value></data>
+  <data name="Nav.Contact" xml:space="preserve"><value>Contact</value></data>
+  <data name="Nav.StaffLogin" xml:space="preserve"><value>Staff login</value></data>
+
+  <data name="Common.Search" xml:space="preserve"><value>Search</value></data>
+  <data name="Common.From" xml:space="preserve"><value>From</value></data>
+  <data name="Common.To" xml:space="preserve"><value>To</value></data>
+  <data name="Common.Date" xml:space="preserve"><value>Date</value></data>
+  <data name="Common.Loading" xml:space="preserve"><value>Loading…</value></data>
+  <data name="Common.Cancel" xml:space="preserve"><value>Cancel</value></data>
+  <data name="Common.Save" xml:space="preserve"><value>Save</value></data>
+  <data name="Common.Back" xml:space="preserve"><value>Back</value></data>
+
+  <data name="Home.Hero.Title" xml:space="preserve"><value>Your seat on the next bus, booked in a minute</value></data>
+  <data name="Home.Hero.Subtitle" xml:space="preserve"><value>No sign-up. Choose your seat on a live map, pay online or at the counter, and travel with a QR ticket.</value></data>
+  <data name="Home.Search.From" xml:space="preserve"><value>Leaving from</value></data>
+  <data name="Home.Search.To" xml:space="preserve"><value>Going to</value></data>
+  <data name="Home.Search.Date" xml:space="preserve"><value>Journey date</value></data>
+  <data name="Home.Search.Submit" xml:space="preserve"><value>Find buses</value></data>
+  <data name="Home.Search.Swap" xml:space="preserve"><value>Swap origin and destination</value></data>
+  <data name="Home.Feature.NoAccount.Title" xml:space="preserve"><value>No account, no hassle</value></data>
+  <data name="Home.Feature.NoAccount.Body" xml:space="preserve"><value>Book with just your name and phone number. Look up every ticket later with that same number.</value></data>
+  <data name="Home.Feature.LiveSeat.Title" xml:space="preserve"><value>Pick the exact seat</value></data>
+  <data name="Home.Feature.LiveSeat.Body" xml:space="preserve"><value>A real-time seat map shows what's free. Your choice is held for a few minutes while you check out.</value></data>
+  <data name="Home.Feature.FlexiblePay.Title" xml:space="preserve"><value>Pay your way</value></data>
+  <data name="Home.Feature.FlexiblePay.Body" xml:space="preserve"><value>Send payment from bKash, Nagad or Rocket and enter the transaction ID — or reserve now and pay at the counter.</value></data>
+  <data name="Home.Popular.Title" xml:space="preserve"><value>Popular routes</value></data>
+  <data name="Home.Popular.From" xml:space="preserve"><value>from</value></data>
+
+  <data name="Footer.Tagline" xml:space="preserve"><value>Intercity bus tickets across Bangladesh.</value></data>
+  <data name="Footer.Support" xml:space="preserve"><value>Support</value></data>
+  <data name="Footer.Rights" xml:space="preserve"><value>All rights reserved.</value></data>
+
+  <data name="Language.Label" xml:space="preserve"><value>Language</value></data>
+  <data name="Language.English" xml:space="preserve"><value>English</value></data>
+  <data name="Language.Bangla" xml:space="preserve"><value>বাংলা</value></data>
+
+  <data name="Login.Title" xml:space="preserve"><value>Staff sign in</value></data>
+  <data name="Login.Intro" xml:space="preserve"><value>Counter and administrator accounts only.</value></data>
+  <data name="Login.Username" xml:space="preserve"><value>Username</value></data>
+  <data name="Login.Password" xml:space="preserve"><value>Password</value></data>
+  <data name="Login.Remember" xml:space="preserve"><value>Keep me signed in</value></data>
+  <data name="Login.Submit" xml:space="preserve"><value>Sign in</value></data>
+  <data name="Login.Failed" xml:space="preserve"><value>The username or password is incorrect.</value></data>
+  <data name="Login.Disabled" xml:space="preserve"><value>This account has been disabled. Contact an administrator.</value></data>
+  <data name="Login.SignOut" xml:space="preserve"><value>Sign out</value></data>
+
+  <data name="Admin.Nav.Dashboard" xml:space="preserve"><value>Dashboard</value></data>
+  <data name="Admin.Nav.Bookings" xml:space="preserve"><value>Bookings</value></data>
+  <data name="Admin.Nav.Payments" xml:space="preserve"><value>Payments</value></data>
+  <data name="Admin.Nav.Trips" xml:space="preserve"><value>Trips</value></data>
+  <data name="Admin.Nav.Schedules" xml:space="preserve"><value>Schedules</value></data>
+  <data name="Admin.Nav.Buses" xml:space="preserve"><value>Buses</value></data>
+  <data name="Admin.Nav.Routes" xml:space="preserve"><value>Routes</value></data>
+  <data name="Admin.Nav.Locations" xml:space="preserve"><value>Locations</value></data>
+  <data name="Admin.Nav.Staff" xml:space="preserve"><value>Staff</value></data>
+  <data name="Admin.Nav.Reports" xml:space="preserve"><value>Reports</value></data>
+  <data name="Admin.Nav.Settings" xml:space="preserve"><value>Settings</value></data>
+  <data name="Admin.Nav.AuditLog" xml:space="preserve"><value>Audit log</value></data>
+  <data name="Admin.Dashboard.Welcome" xml:space="preserve"><value>Welcome back</value></data>
+  <data name="Admin.Dashboard.Placeholder" xml:space="preserve"><value>Dashboard widgets arrive once bookings start flowing.</value></data>
+
+  <data name="Error.Title" xml:space="preserve"><value>Something went wrong</value></data>
+  <data name="Error.Body" xml:space="preserve"><value>The page couldn't be loaded. Please try again.</value></data>
+  <data name="NotFound.Title" xml:space="preserve"><value>Page not found</value></data>
+  <data name="NotFound.Body" xml:space="preserve"><value>The page you're after doesn't exist or has moved.</value></data>
+  <data name="NotFound.Home" xml:space="preserve"><value>Back to home</value></data>
+</root>
