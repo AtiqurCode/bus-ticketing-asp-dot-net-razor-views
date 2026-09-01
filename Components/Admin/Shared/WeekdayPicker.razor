@@ -1,0 +1,37 @@
+@* Toggle set of weekdays, two-way bound as a WeekDays flags value. *@
+
+<div class="weekdays" role="group" aria-label="Operating days">
+    @foreach (var (day, label) in Days)
+    {
+        var on = Value.Includes(day);
+        <button type="button"
+                class="weekdays__day @(on ? "is-on" : "")"
+                aria-pressed="@on"
+                @onclick="() => Toggle(day)">
+            @label
+        </button>
+    }
+</div>
+
+@code {
+    [Parameter] public WeekDays Value { get; set; } = WeekDays.All;
+    [Parameter] public EventCallback<WeekDays> ValueChanged { get; set; }
+
+    private static readonly (DayOfWeek Day, string Label)[] Days =
+    [
+        (DayOfWeek.Saturday, "Sat"),
+        (DayOfWeek.Sunday, "Sun"),
+        (DayOfWeek.Monday, "Mon"),
+        (DayOfWeek.Tuesday, "Tue"),
+        (DayOfWeek.Wednesday, "Wed"),
+        (DayOfWeek.Thursday, "Thu"),
+        (DayOfWeek.Friday, "Fri")
+    ];
+
+    private async Task Toggle(DayOfWeek day)
+    {
+        var flag = WeekDaysExtensions.FromDayOfWeek(day);
+        Value = Value.Includes(day) ? Value & ~flag : Value | flag;
+        await ValueChanged.InvokeAsync(Value);
+    }
+}

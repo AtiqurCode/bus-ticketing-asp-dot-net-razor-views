@@ -36,6 +36,18 @@ public sealed class RouteService(IDbContextFactory<AppDbContext> dbFactory, Audi
             .FirstOrDefaultAsync(r => r.Id == id, ct);
     }
 
+    public async Task<List<BusRoute>> ActiveAsync(CancellationToken ct = default)
+    {
+        await using var db = await dbFactory.CreateDbContextAsync(ct);
+        return await db.Routes
+            .Include(r => r.OriginLocation)
+            .Include(r => r.DestinationLocation)
+            .AsNoTracking()
+            .Where(r => r.IsActive)
+            .OrderBy(r => r.OriginLocation.Name).ThenBy(r => r.DestinationLocation.Name)
+            .ToListAsync(ct);
+    }
+
     public async Task<OperationResult<Guid>> CreateAsync(BusRoute input, CancellationToken ct = default)
     {
         var validation = Validate(input);

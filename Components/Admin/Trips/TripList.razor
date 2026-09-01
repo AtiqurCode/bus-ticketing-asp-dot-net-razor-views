@@ -1,0 +1,245 @@
+@page "/staff/trips"
+@rendermode InteractiveServer
+@inject TripService Trips
+@inject RouteService Routes
+@inject IAppClock Clock
+@inject NavigationManager Nav
+@inject IStringLocalizer<SharedResource> Loc
+
+<PageTitle>@Loc["Admin.Nav.Trips"]</PageTitle>
+
+<PageHeading Title="@Loc["Admin.Nav.Trips"]"
+             Description="Every bookable departure — generated from a schedule or added by hand.">
+    <Actions>
+        <a class="btn" href="/staff/trips/new">Add one-off trip</a>
+    </Actions>
+</PageHeading>
+
+<div class="toolbar">
+    <select class="select" @onchange="OnRouteFilter">
+        <option value="">All routes</option>
+        @foreach (var r in _routes)
+        {
+            <option value="@r.Id" selected="@(r.Id == _routeId)">@r.OriginLocation.Name → @r.DestinationLocation.Name</option>
+        }
+    </select>
+    <input class="input" type="date" value="@_dateFilter" @onchange="OnDateFilter" />
+    <select class="select" @onchange="OnStatusFilter">
+        <option value="">Any status</option>
+        @foreach (var s in Enum.GetValues<TripStatus>())
+        {
+            <option value="@s" selected="@(s == _status)">@s</option>
+        }
+    </select>
+    <label class="checkline">
+        <input type="checkbox" checked="@_upcomingOnly" @onchange="OnUpcomingToggle" />
+        <span>Upcoming only</span>
+    </label>
+    <span class="toolbar__spacer"></span>
+    <span class="muted text-sm">@_page.Total trips</span>
+</div>
+
+@if (_flash is not null)
+{
+    <div class="alert alert--success" style="margin-bottom: var(--space-4);">@_flash</div>
+}
+
+@if (_loading)
+{
+    <div class="loading-block">@Loc["Common.Loading"]</div>
+}
+else if (_page.Items.Count == 0)
+{
+    <div class="table-wrap"><EmptyState Title="No trips match" Message="Adjust the filters, generate from a schedule, or add a one-off trip." /></div>
+}
+else
+{
+    <div class="table-wrap table-scroll">
+        <table class="data">
+            <thead>
+                <tr>
+                    <th>Departure</th>
+                    <th>Route</th>
+                    <th>Bus</th>
+                    <th class="num">Fare</th>
+                    <th class="num">Seats</th>
+                    <th>Status</th>
+                    <th>Source</th>
+                    <th class="actions"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var t in _page.Items)
+                {
+                    <tr>
+                        <td>
+                            <strong>@ToLocal(t.DepartureTime).ToString("ddd d MMM")</strong>
+                            <div class="muted text-sm">@ToLocal(t.DepartureTime).ToString("HH:mm")</div>
+                        </td>
+                        <td>@t.RouteName</td>
+                        <td>@t.BusName<div class="muted text-sm">@t.Operator</div></td>
+                        <td class="num">৳@t.Fare.ToString("0")</td>
+                        <td class="num">
+                            @t.SeatsBooked / @t.TotalSeats
+                            @if (t.SeatsHeld > 0)
+                            {
+                                <span class="muted text-sm"> (@t.SeatsHeld held)</span>
+                            }
+                        </td>
+                        <td><span class="badge @StatusClass(t.Status)">@t.Status</span></td>
+                        <td class="text-sm muted">@(t.IsManualOverride ? "Manual" : "Schedule")</td>
+                        <td class="actions">
+                            <div class="row-actions">
+                                <button class="icon-btn" title="Edit" @onclick="() => Edit(t.Id)"
+                                        disabled="@(t.Status is TripStatus.Completed or TripStatus.Departed)">✎</button>
+                                @if (t.Status is TripStatus.Scheduled)
+                                {
+                                    <button class="icon-btn icon-btn--danger" title="Cancel trip" @onclick="() => _cancelTarget = t">✕</button>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    @if (_page.TotalPages > 1)
+    {
+        <div class="pager">
+            <button class="btn btn--ghost btn--sm" disabled="@(_pageNo <= 1)" @onclick="() => GoTo(_pageNo - 1)">Previous</button>
+            <span class="muted text-sm">Page @_pageNo of @_page.TotalPages</span>
+            <button class="btn btn--ghost btn--sm" disabled="@(_pageNo >= _page.TotalPages)" @onclick="() => GoTo(_pageNo + 1)">Next</button>
+        </div>
+    }
+}
+
+@if (_cancelTarget is not null)
+{
+    <div class="modal-backdrop" @onclick="() => _cancelTarget = null">
+        <div class="modal" @onclick:stopPropagation role="dialog" aria-modal="true">
+            <h3>Cancel this trip?</h3>
+            <p>@_cancelTarget.RouteName · @ToLocal(_cancelTarget.DepartureTime).ToString("ddd d MMM, HH:mm")</p>
+            @if (_cancelTarget.SeatsBooked > 0)
+            {
+                <div class="alert alert--error">@_cancelTarget.SeatsBooked seat(s) are booked. Passengers will need to be contacted and refunded.</div>
+            }
+            <div class="field">
+                <label for="reason">Reason</label>
+                <input id="reason" class="input" @bind="_cancelReason" @bind:event="oninput" placeholder="Bus breakdown, low demand…" />
+            </div>
+            @if (_cancelError is not null)
+            {
+                <div class="alert alert--error" style="margin-top: var(--space-3);">@_cancelError</div>
+            }
+            <div class="modal__actions">
+                <button class="btn btn--ghost" @onclick="() => _cancelTarget = null">Keep it</button>
+                <button class="btn btn--danger" @onclick="ConfirmCancel" disabled="@_cancelling">@(_cancelling ? "…" : "Cancel trip")</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private TripPage _page = new([], 0, 1, 40);
+    private List<BusRoute> _routes = [];
+    private Guid? _routeId;
+    private DateOnly? _date;
+    private TripStatus? _status;
+    private bool _upcomingOnly = true;
+    private int _pageNo = 1;
+    private bool _loading = true;
+    private string? _flash;
+
+    private TripRow? _cancelTarget;
+    private string _cancelReason = "";
+    private bool _cancelling;
+    private string? _cancelError;
+
+    private string _dateFilter => _date?.ToString("yyyy-MM-dd") ?? "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        _routes = await Routes.ActiveAsync();
+        await Reload();
+    }
+
+    private async Task Reload()
+    {
+        _loading = true;
+        _page = await Trips.QueryAsync(_routeId, _date, _status, _upcomingOnly, _pageNo);
+        _loading = false;
+    }
+
+    private DateTimeOffset ToLocal(DateTimeOffset instant) => Clock.ToLocal(instant);
+
+    private void Edit(Guid id) => Nav.NavigateTo($"/staff/trips/{id}");
+
+    private async Task OnRouteFilter(ChangeEventArgs e)
+    {
+        _routeId = Guid.TryParse((string?)e.Value, out var id) ? id : null;
+        _pageNo = 1;
+        await Reload();
+    }
+
+    private async Task OnDateFilter(ChangeEventArgs e)
+    {
+        _date = DateOnly.TryParse((string?)e.Value, out var d) ? d : null;
+        _pageNo = 1;
+        await Reload();
+    }
+
+    private async Task OnStatusFilter(ChangeEventArgs e)
+    {
+        _status = Enum.TryParse<TripStatus>((string?)e.Value, out var s) ? s : null;
+        _pageNo = 1;
+        await Reload();
+    }
+
+    private async Task OnUpcomingToggle(ChangeEventArgs e)
+    {
+        _upcomingOnly = e.Value is true;
+        _pageNo = 1;
+        await Reload();
+    }
+
+    private async Task GoTo(int page)
+    {
+        _pageNo = Math.Clamp(page, 1, Math.Max(_page.TotalPages, 1));
+        await Reload();
+    }
+
+    private async Task ConfirmCancel()
+    {
+        if (_cancelTarget is null) return;
+        _cancelError = null;
+        if (string.IsNullOrWhiteSpace(_cancelReason))
+        {
+            _cancelError = "Give a reason for the cancellation.";
+            return;
+        }
+        _cancelling = true;
+        var result = await Trips.CancelAsync(_cancelTarget.Id, _cancelReason.Trim());
+        _cancelling = false;
+        if (result.Succeeded)
+        {
+            _flash = "Trip cancelled.";
+            _cancelTarget = null;
+            _cancelReason = "";
+            await Reload();
+        }
+        else
+        {
+            _cancelError = result.Error;
+        }
+    }
+
+    private static string StatusClass(TripStatus s) => s switch
+    {
+        TripStatus.Scheduled => "badge--info",
+        TripStatus.Departed => "badge--warning",
+        TripStatus.Completed => "badge--success",
+        TripStatus.Cancelled => "badge--danger",
+        _ => ""
+    };
+}

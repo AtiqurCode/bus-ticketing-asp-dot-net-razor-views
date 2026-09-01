@@ -1,0 +1,142 @@
+@page "/staff/schedules"
+@rendermode InteractiveServer
+@attribute [Authorize(Policy = AuthPolicies.SuperAdmin)]
+@inject ScheduleTemplateService Templates
+@inject TripGenerationService Generator
+@inject NavigationManager Nav
+@inject IStringLocalizer<SharedResource> Loc
+
+<PageTitle>@Loc["Admin.Nav.Schedules"]</PageTitle>
+
+<PageHeading Title="@Loc["Admin.Nav.Schedules"]"
+             Description="A recurring departure pattern per route. The generator turns each active schedule into real trips across the rolling booking window.">
+    <Actions>
+        <button class="btn btn--ghost" @onclick="RunGenerator" disabled="@_generating">
+            @(_generating ? "Generating…" : "Generate now")
+        </button>
+        <a class="btn" href="/staff/schedules/new">Add schedule</a>
+    </Actions>
+</PageHeading>
+
+@if (_flash is not null)
+{
+    <div class="alert alert--success" style="margin-bottom: var(--space-4);">@_flash</div>
+}
+@if (_error is not null)
+{
+    <div class="alert alert--error" style="margin-bottom: var(--space-4);">@_error</div>
+}
+
+@if (_loading)
+{
+    <div class="loading-block">@Loc["Common.Loading"]</div>
+}
+else if (_rows.Count == 0)
+{
+    <div class="table-wrap">
+        <EmptyState Title="No schedules yet">
+            <a class="btn" href="/staff/schedules/new">Create the first schedule</a>
+        </EmptyState>
+    </div>
+}
+else
+{
+    <div class="table-wrap table-scroll">
+        <table class="data">
+            <thead>
+                <tr>
+                    <th>Schedule</th>
+                    <th>Route</th>
+                    <th>Bus</th>
+                    <th>Departures</th>
+                    <th>Days</th>
+                    <th class="num">Fare</th>
+                    <th>Status</th>
+                    <th class="actions"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var t in _rows)
+                {
+                    <tr>
+                        <td><strong>@t.Name</strong></td>
+                        <td>@t.Route.OriginLocation.Name → @t.Route.DestinationLocation.Name</td>
+                        <td>@t.Bus.Name<div class="muted text-sm">@t.Bus.Operator</div></td>
+                        <td class="text-sm">
+                            @t.StartTime.ToString("HH:mm")–@t.EndTime.ToString("HH:mm")
+                            <span class="muted">every @Humanize(t.IntervalMinutes)</span>
+                        </td>
+                        <td class="text-sm">@DaysLabel(t.OperatingDays)</td>
+                        <td class="num">৳@t.Fare.ToString("0")</td>
+                        <td><StatusPill Active="t.IsActive" OnLabel="Running" OffLabel="Paused" /></td>
+                        <td class="actions">
+                            <div class="row-actions">
+                                <button class="icon-btn" title="Edit" @onclick="() => Edit(t.Id)">✎</button>
+                                <button class="icon-btn" title="@(t.IsActive ? "Pause" : "Resume")"
+                                        @onclick="() => Toggle(t)">@(t.IsActive ? "⏸" : "▶")</button>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    private List<ScheduleTemplate> _rows = [];
+    private bool _loading = true;
+    private bool _generating;
+    private string? _flash;
+    private string? _error;
+
+    protected override Task OnInitializedAsync() => Reload();
+
+    private void Edit(Guid id) => Nav.NavigateTo($"/staff/schedules/{id}");
+
+    private async Task Reload()
+    {
+        _loading = true;
+        _rows = await Templates.ListAsync();
+        _loading = false;
+    }
+
+    private async Task Toggle(ScheduleTemplate t)
+    {
+        await Templates.SetActiveAsync(t.Id, !t.IsActive);
+        await Reload();
+    }
+
+    private async Task RunGenerator()
+    {
+        _flash = _error = null;
+        _generating = true;
+        try
+        {
+            var summary = await Generator.TopUpAsync();
+            _flash = summary.TripsCreated == 0
+                ? "Everything's already generated for the current window."
+                : $"Generated {summary.TripsCreated} trips ({summary.SeatsCreated} seats).";
+        }
+        catch (Exception ex)
+        {
+            _error = "Generation failed: " + ex.Message;
+        }
+        _generating = false;
+        await Reload();
+    }
+
+    private static string Humanize(int minutes) => minutes % 60 == 0
+        ? $"{minutes / 60}h"
+        : $"{minutes}m";
+
+    private static string DaysLabel(WeekDays days)
+    {
+        if (days == WeekDays.All) return "Every day";
+        string[] names = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+        var on = Enumerable.Range(0, 7)
+            .Where(i => days.Includes((DayOfWeek)i))
+            .Select(i => names[i]);
+        return string.Join(", ", on);
+    }
+}

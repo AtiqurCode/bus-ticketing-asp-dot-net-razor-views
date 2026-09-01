@@ -14,6 +14,12 @@ public interface IAppClock
     DateTimeOffset ToLocal(DateTimeOffset instant);
 
     DateOnly LocalToday { get; }
+
+    /// <summary>Interpret a wall-clock date + time in the platform zone and return the UTC instant.</summary>
+    DateTimeOffset ToInstant(DateOnly date, TimeOnly time);
+
+    /// <summary>Interpret a wall-clock <see cref="DateTime"/> in the platform zone and return the UTC instant.</summary>
+    DateTimeOffset ToInstant(DateTime localWallClock);
 }
 
 public sealed class AppClock(SettingsService settings) : IAppClock
@@ -26,4 +32,13 @@ public sealed class AppClock(SettingsService settings) : IAppClock
         TimeZoneInfo.ConvertTime(instant, TimeZone);
 
     public DateOnly LocalToday => DateOnly.FromDateTime(ToLocal(UtcNow).DateTime);
+
+    public DateTimeOffset ToInstant(DateOnly date, TimeOnly time) =>
+        ToInstant(date.ToDateTime(time));
+
+    public DateTimeOffset ToInstant(DateTime localWallClock)
+    {
+        var unspecified = DateTime.SpecifyKind(localWallClock, DateTimeKind.Unspecified);
+        return new DateTimeOffset(TimeZoneInfo.ConvertTimeToUtc(unspecified, TimeZone), TimeSpan.Zero);
+    }
 }

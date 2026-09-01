@@ -1,0 +1,27 @@
+.weekdays {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+}
+
+.weekdays__day {
+    min-width: 48px;
+    padding: 0.45rem 0.6rem;
+    border: 1px solid var(--ink-300);
+    border-radius: var(--radius);
+    background: var(--surface);
+    font: inherit;
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: var(--ink-500);
+    cursor: pointer;
+    transition: all .12s ease;
+}
+
+.weekdays__day:hover { border-color: var(--green-500); }
+
+.weekdays__day.is-on {
+    background: var(--green-700);
+    border-color: var(--green-700);
+    color: #fff;
+}

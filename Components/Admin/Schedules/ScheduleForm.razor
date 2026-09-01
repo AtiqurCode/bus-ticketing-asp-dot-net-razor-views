@@ -1,0 +1,300 @@
+@page "/staff/schedules/new"
+@page "/staff/schedules/{Id:guid}"
+@rendermode RenderModes.ServerNoPrerender
+@attribute [Authorize(Policy = AuthPolicies.SuperAdmin)]
+@inject ScheduleTemplateService Templates
+@inject TripGenerationService Generator
+@inject RouteService Routes
+@inject BusService Buses
+@inject LocationService Locations
+@inject SettingsService Settings
+@inject NavigationManager Nav
+
+<PageTitle>@(IsNew ? "Add schedule" : "Edit schedule")</PageTitle>
+
+<PageHeading Title="@(IsNew ? "Add a schedule" : $"Edit {_model.Name}")"
+             Description="Editing a schedule only changes trips generated from now on — trips already created (and any bookings) stay as they are." />
+
+@if (_loading)
+{
+    <div class="loading-block">Loading…</div>
+}
+else
+{
+    <div class="grid-2col">
+        <div class="card form-card">
+            <div class="card__body">
+                <EditForm Model="_model" OnValidSubmit="Save">
+                    <DataAnnotationsValidator />
+
+                    <div class="form-grid">
+                        <div class="field col-span-2">
+                            <label for="name">Schedule name</label>
+                            <InputText id="name" class="input" @bind-Value="_model.Name" placeholder="Dhaka – Chattogram day service" />
+                            <ValidationMessage For="() => _model.Name" />
+                        </div>
+
+                        <div class="field">
+                            <label for="route">Route</label>
+                            <select id="route" class="select" value="@IdStr(_model.RouteId)" @onchange="e => _model.RouteId = ParseId(e.Value)">
+                                <option value="">— choose —</option>
+                                @foreach (var r in _routes)
+                                {
+                                    <option value="@r.Id">@r.OriginLocation.Name → @r.DestinationLocation.Name</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label for="bus">Bus</label>
+                            <select id="bus" class="select" value="@IdStr(_model.BusId)" @onchange="e => _model.BusId = ParseId(e.Value)">
+                                <option value="">— choose —</option>
+                                @foreach (var b in _buses)
+                                {
+                                    <option value="@b.Id">@b.Name — @b.Operator (@b.TotalSeats)</option>
+                                }
+                            </select>
+                        </div>
+
+                        <div class="field">
+                            <label for="start">First departure</label>
+                            <InputDate Type="InputDateType.Time" id="start" class="input" @bind-Value="_model.StartTime" />
+                        </div>
+                        <div class="field">
+                            <label for="end">Last departure</label>
+                            <InputDate Type="InputDateType.Time" id="end" class="input" @bind-Value="_model.EndTime" />
+                        </div>
+
+                        <div class="field">
+                            <label for="interval">Every</label>
+                            <select id="interval" class="select" @bind="_model.IntervalMinutes">
+                                @foreach (var opt in _intervalOptions)
+                                {
+                                    <option value="@opt">@FormatInterval(opt)</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label for="fare">Fare (৳)</label>
+                            <InputNumber id="fare" class="input" @bind-Value="_model.Fare" />
+                        </div>
+
+                        <div class="field col-span-2">
+                            <label>Operating days</label>
+                            <WeekdayPicker @bind-Value="_model.OperatingDays" />
+                        </div>
+
+                        <div class="field">
+                            <label>Default boarding point</label>
+                            <LocationPicker Options="_counters" @bind-Value="_model.BoardingCounterId" Placeholder="Optional" />
+                        </div>
+                        <div class="field">
+                            <label>Default dropping point</label>
+                            <LocationPicker Options="_counters" @bind-Value="_model.DroppingCounterId" Placeholder="Optional" />
+                        </div>
+
+                        <label class="checkline col-span-2">
+                            <InputCheckbox @bind-Value="_model.IsActive" />
+                            <span>Generate trips from this schedule</span>
+                        </label>
+                    </div>
+
+                    @if (_error is not null)
+                    {
+                        <div class="alert alert--error" style="margin-top: var(--space-4);" role="alert">@_error</div>
+                    }
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn" disabled="@_saving">@(_saving ? "Saving…" : "Save schedule")</button>
+                        <a class="btn btn--ghost" href="/staff/schedules">Cancel</a>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card__body stack">
+                <h3>Preview</h3>
+                @{
+                    var times = PreviewTimes().ToList();
+                }
+                @if (times.Count == 0)
+                {
+                    <p class="muted text-sm">Set a start, end and interval to see the departures.</p>
+                }
+                else
+                {
+                    <p class="muted text-sm">
+                        @times.Count departures a day · @(times.Count * DayCount(_model.OperatingDays)) trips a week
+                    </p>
+                    <div class="chips">
+                        @foreach (var t in times)
+                        {
+                            <span class="chip">@t.ToString("HH:mm")</span>
+                        }
+                    </div>
+                }
+                @if (!IsNew)
+                {
+                    <hr class="rule" />
+                    <p class="muted text-sm">
+                        Changed the pattern? Rebuild the unbooked upcoming trips to match.
+                    </p>
+                    <button type="button" class="btn btn--ghost btn--sm" @onclick="Regenerate" disabled="@_regenerating">
+                        @(_regenerating ? "Rebuilding…" : "Regenerate upcoming trips")
+                    </button>
+                    @if (_regenNote is not null)
+                    {
+                        <div class="alert alert--success">@_regenNote</div>
+                    }
+                }
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public Guid? Id { get; set; }
+
+    private ScheduleEditModel _model = new();
+    private List<BusRoute> _routes = [];
+    private List<Bus> _buses = [];
+    private List<Location> _counters = [];
+    private int[] _intervalOptions = [];
+    private bool _loading = true;
+    private bool _saving;
+    private bool _regenerating;
+    private string? _error;
+    private string? _regenNote;
+
+    private bool IsNew => Id is null;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _loading = true;
+        _routes = await Routes.ActiveAsync();
+        _buses = await Buses.ActiveForSchedulingAsync();
+        _counters = await Locations.BoardingPointsAsync();
+        _intervalOptions = Settings.Current.IntervalOptions().DefaultIfEmpty(120).ToArray();
+
+        if (Id is { } id)
+        {
+            var existing = await Templates.GetAsync(id);
+            if (existing is null)
+            {
+                Nav.NavigateTo("/staff/schedules");
+                return;
+            }
+            _model = ScheduleEditModel.From(existing);
+        }
+        else
+        {
+            _model.IntervalMinutes = _intervalOptions.FirstOrDefault(120);
+        }
+        _loading = false;
+    }
+
+    private static string IdStr(Guid value) => value == Guid.Empty ? "" : value.ToString();
+
+    private static Guid ParseId(object? value) => Guid.TryParse(value?.ToString(), out var id) ? id : Guid.Empty;
+
+    private async Task Save()
+    {
+        _error = null;
+        _saving = true;
+
+        var entity = _model.ToEntity();
+        string? error;
+        if (IsNew)
+        {
+            var r = await Templates.CreateAsync(entity);
+            error = r.Succeeded ? null : r.Error;
+        }
+        else
+        {
+            entity.Id = Id!.Value;
+            var r = await Templates.UpdateAsync(entity);
+            error = r.Succeeded ? null : r.Error;
+        }
+
+        _saving = false;
+        if (error is null)
+            Nav.NavigateTo("/staff/schedules");
+        else
+            _error = error;
+    }
+
+    private async Task Regenerate()
+    {
+        _regenerating = true;
+        _regenNote = null;
+        var summary = await Generator.RegenerateAsync(Id!.Value);
+        _regenNote = $"Rebuilt — {summary.TripsCreated} upcoming trips now match the schedule.";
+        _regenerating = false;
+    }
+
+    private IEnumerable<TimeOnly> PreviewTimes()
+    {
+        if (_model.IntervalMinutes <= 0 || _model.EndTime < _model.StartTime)
+            yield break;
+        for (var t = _model.StartTime; t <= _model.EndTime; t = t.AddMinutes(_model.IntervalMinutes))
+        {
+            yield return t;
+            if (t.AddMinutes(_model.IntervalMinutes) < t) yield break;
+        }
+    }
+
+    private static int DayCount(WeekDays days) =>
+        Enumerable.Range(0, 7).Count(i => days.Includes((DayOfWeek)i));
+
+    private static string FormatInterval(int minutes) => minutes % 60 == 0
+        ? $"{minutes / 60} hour{(minutes == 60 ? "" : "s")}"
+        : $"{minutes} minutes";
+
+    private sealed class ScheduleEditModel
+    {
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Name the schedule.")]
+        [System.ComponentModel.DataAnnotations.MaxLength(120)]
+        public string Name { get; set; } = "";
+
+        public Guid RouteId { get; set; }
+        public Guid BusId { get; set; }
+        public TimeOnly StartTime { get; set; } = new(6, 0);
+        public TimeOnly EndTime { get; set; } = new(22, 0);
+        public int IntervalMinutes { get; set; } = 120;
+        public decimal Fare { get; set; }
+        public WeekDays OperatingDays { get; set; } = WeekDays.All;
+        public Guid? BoardingCounterId { get; set; }
+        public Guid? DroppingCounterId { get; set; }
+        public bool IsActive { get; set; } = true;
+
+        public static ScheduleEditModel From(ScheduleTemplate t) => new()
+        {
+            Name = t.Name,
+            RouteId = t.RouteId,
+            BusId = t.BusId,
+            StartTime = t.StartTime,
+            EndTime = t.EndTime,
+            IntervalMinutes = t.IntervalMinutes,
+            Fare = t.Fare,
+            OperatingDays = t.OperatingDays,
+            BoardingCounterId = t.BoardingCounterId,
+            DroppingCounterId = t.DroppingCounterId,
+            IsActive = t.IsActive
+        };
+
+        public ScheduleTemplate ToEntity() => new()
+        {
+            Name = Name,
+            RouteId = RouteId,
+            BusId = BusId,
+            StartTime = StartTime,
+            EndTime = EndTime,
+            IntervalMinutes = IntervalMinutes,
+            Fare = Fare,
+            OperatingDays = OperatingDays,
+            BoardingCounterId = BoardingCounterId,
+            DroppingCounterId = DroppingCounterId,
+            IsActive = IsActive
+        };
+    }
+}

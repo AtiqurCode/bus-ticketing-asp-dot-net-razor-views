@@ -29,8 +29,13 @@
         [
             new("/staff", Loc["Admin.Nav.Dashboard"], "▚", NavLinkMatch.All)
         ]),
+        new("Operations",
+        [
+            new("/staff/trips", Loc["Admin.Nav.Trips"], "🚌")
+        ]),
         new("Planning",
         [
+            new("/staff/schedules", Loc["Admin.Nav.Schedules"], "🗓", SuperAdminOnly: true),
             new("/staff/routes", Loc["Admin.Nav.Routes"], "↔", SuperAdminOnly: true),
             new("/staff/buses", Loc["Admin.Nav.Buses"], "▤", SuperAdminOnly: true),
             new("/staff/locations", Loc["Admin.Nav.Locations"], "◉", SuperAdminOnly: true)

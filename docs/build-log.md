@@ -81,3 +81,35 @@ in `_Imports.razor` — needs `@using static …RenderMode` and a per-page direc
 
 Verified end-to-end with a Playwright script (`scratchpad/drive.mjs`): login → create
 a bus + seat map → routes → staff → settings → audit, 0 console errors, plus mobile.
+
+## Milestone 3 — Recurring schedule engine
+
+- **`ScheduleTemplateService`** — CRUD for the recurring pattern (route, bus,
+  first/last departure, interval, fare, operating days, default counters).
+  Delete is blocked once trips exist — deactivate instead.
+- **`TripGenerationService`** — the engine:
+  - `TopUpAsync` walks every active template and materialises `Trip` + `TripSeat`
+    rows for each operating day in `[today, today + GenerationWindowDays]`.
+  - Dedup on `(RouteId, DepartureTime)` — an existing row (generated, manually
+    overridden, or cancelled) blocks that minute, so the generator never
+    double-books or overwrites a hand-made trip.
+  - `RegenerateAsync(templateId)` drops future unbooked generator-owned trips
+    and rebuilds them — the explicit "I changed the pattern" action.
+  - `AdvanceStatusesAsync` moves trips Scheduled → Departed → Completed by clock.
+- **`TripGenerationBackgroundService`** — `PeriodicTimer` every 15 min: advance
+  statuses each tick, top up every 6 h. Honours `AppSettings.AutoGenerationPaused`.
+- **`TripService`** — manual trip CRUD + paged/filtered listing (route, date,
+  status, upcoming-only), one-off create, edit (flips `IsManualOverride` on),
+  cancel with reason (frees non-booked seats), manual status override.
+- **Screens**: `/staff/schedules` (list + "Generate now"), `/staff/schedules/{id}`
+  (form with a live departure-times preview + "Regenerate upcoming trips"),
+  `/staff/trips` (filtered list + cancel modal), `/staff/trips/{id}` (one-off form).
+  Shared `WeekdayPicker`.
+
+**Bug fixed:** Npgsql `timestamptz` only accepts `DateTimeOffset` at offset 0.
+Building departures as `new DateTimeOffset(local, +06:00)` threw on save. Added
+`IAppClock.ToInstant(date, time)` / `ToInstant(DateTime)` which converts a
+platform-zone wall clock to a UTC instant; all trip times go through it.
+
+Verified with `scratchpad/drive-m3.mjs`: schedule create → 54 trips generated
+(9/day × 6 days, Friday excluded), one-off trip, trip cancel. 0 errors.

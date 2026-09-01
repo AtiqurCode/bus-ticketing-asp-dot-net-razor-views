@@ -7,6 +7,7 @@ using BusTicketing.Services;
 using BusTicketing.Services.Admin;
 using BusTicketing.Services.Auth;
 using BusTicketing.Services.Localization;
+using BusTicketing.Services.Scheduling;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -93,6 +94,10 @@ builder.Services.AddScoped<LocationService>();
 builder.Services.AddScoped<BusService>();
 builder.Services.AddScoped<RouteService>();
 builder.Services.AddScoped<StaffService>();
+builder.Services.AddScoped<ScheduleTemplateService>();
+builder.Services.AddScoped<TripService>();
+builder.Services.AddScoped<TripGenerationService>();
+builder.Services.AddHostedService<TripGenerationBackgroundService>();
 
 // --- Blazor --------------------------------------------------
 builder.Services.AddRazorComponents()
