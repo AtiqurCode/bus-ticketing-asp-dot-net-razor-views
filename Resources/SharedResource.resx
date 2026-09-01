@@ -120,6 +120,7 @@
   <data name="Admin.Nav.Reports" xml:space="preserve"><value>Reports</value></data>
   <data name="Admin.Nav.Settings" xml:space="preserve"><value>Settings</value></data>
   <data name="Admin.Nav.AuditLog" xml:space="preserve"><value>Audit log</value></data>
+  <data name="Admin.Nav.Sell" xml:space="preserve"><value>Sell a ticket</value></data>
   <data name="Admin.Dashboard.Welcome" xml:space="preserve"><value>Welcome back</value></data>
   <data name="Admin.Dashboard.Placeholder" xml:space="preserve"><value>Dashboard widgets arrive once bookings start flowing.</value></data>
 

@@ -1,0 +1,348 @@
+@page "/staff/sell"
+@rendermode RenderModes.ServerNoPrerender
+@using System.ComponentModel.DataAnnotations
+@using BusTicketing.Services.Bookings
+@implements IAsyncDisposable
+@inject TripSearchService Search
+@inject SeatHoldService Holds
+@inject BookingService Bookings
+@inject SeatMapBroadcaster Broadcaster
+@inject IDbContextFactory<AppDbContext> DbFactory
+@inject SettingsService Settings
+@inject IAppClock Clock
+@inject AuthenticationStateProvider AuthState
+@inject NavigationManager Nav
+
+<PageTitle>Sell a ticket</PageTitle>
+
+<PageHeading Title="Sell a ticket" Description="Book on behalf of a walk-in passenger." />
+
+@if (_step == Step.Search)
+{
+    <div class="card form-card">
+        <div class="card__body">
+            <div class="form-grid">
+                <div class="field">
+                    <label for="from">From</label>
+                    <input id="from" class="input" list="places" @bind="_from" autocomplete="off" />
+                </div>
+                <div class="field">
+                    <label for="to">To</label>
+                    <input id="to" class="input" list="places" @bind="_to" autocomplete="off" />
+                </div>
+                <div class="field">
+                    <label for="date">Date</label>
+                    <input id="date" type="date" class="input" value="@_dateText"
+                           @onchange="e => _dateText = (string?)e.Value ?? _dateText" min="@_minDate" max="@_maxDate" />
+                </div>
+                <div class="field" style="align-self: end;">
+                    <button class="btn" @onclick="RunSearch" disabled="@_busy">Search</button>
+                </div>
+            </div>
+            <datalist id="places">
+                @foreach (var p in _places) { <option value="@p"></option> }
+            </datalist>
+        </div>
+    </div>
+
+    @if (_searched)
+    {
+        @if (_results.Count == 0)
+        {
+            <div class="table-wrap" style="margin-top: var(--space-4);">
+                <EmptyState Title="No trips" Message="No scheduled departures match. Try another date." />
+            </div>
+        }
+        else
+        {
+            <div class="results" style="margin-top: var(--space-4);">
+                @foreach (var r in _results)
+                {
+                    <article class="result">
+                        <div class="result__time">
+                            <div class="result__depart">@Clock.ToLocal(r.DepartureTime).ToString("HH:mm")</div>
+                            <div class="result__dur muted text-sm">@Clock.ToLocal(r.DepartureTime).ToString("ddd d MMM")</div>
+                        </div>
+                        <div class="result__body">
+                            <div class="result__op">@r.Operator</div>
+                            <div class="muted text-sm">@r.BusName · @r.ClassLabel</div>
+                        </div>
+                        <div class="result__cta">
+                            <div class="result__fare">৳@r.Fare.ToString("0")</div>
+                            <div class="muted text-sm">@r.SeatsAvailable seats</div>
+                            <button class="btn" disabled="@(r.SoldOut || _busy)" @onclick="() => PickTrip(r.TripId)">Choose</button>
+                        </div>
+                    </article>
+                }
+            </div>
+        }
+    }
+}
+else if (_step == Step.Seats && _context is not null)
+{
+    <div class="book">
+        <div class="book__main">
+            <button class="btn btn--ghost btn--sm" @onclick="BackToSearch">← Change trip</button>
+            <div class="triphead card"><div class="card__body">
+                <div class="triphead__route">@_context.OriginName → @_context.DestinationName</div>
+                <div class="triphead__meta muted">@Clock.ToLocal(_context.DepartureTime).ToString("ddd d MMM, HH:mm") · @_context.Operator · @_context.ClassLabel</div>
+            </div></div>
+            <h3>Seats</h3>
+            @if (_seatError is not null)
+            {
+                <div class="alert alert--error">@_seatError</div>
+            }
+            <SeatChart Seats="_context.Seats" Rows="_context.Rows" Columns="_context.Columns"
+                       Decks="_context.Decks" OnSeatClicked="ToggleSeat" Disabled="_busy" />
+        </div>
+        <aside class="book__side">
+            <div class="summary card"><div class="card__body">
+                <h3>Selection</h3>
+                @if (_selected.Count == 0)
+                {
+                    <p class="muted text-sm">Tap seats on the map.</p>
+                }
+                else
+                {
+                    <div class="summary__row"><span>Seats</span><span class="summary__seats">@string.Join(", ", _selected)</span></div>
+                    <div class="summary__total"><span>Total</span><span>৳@((_context.Fare * _selected.Count).ToString("0"))</span></div>
+                }
+                <button class="btn btn--block" disabled="@(_selected.Count == 0 || _busy)" @onclick="() => _step = Step.Details">Continue</button>
+            </div></div>
+        </aside>
+    </div>
+}
+else if (_step == Step.Details && _context is not null)
+{
+    <div class="card form-card">
+        <div class="card__body">
+            <EditForm Model="_form" OnValidSubmit="Confirm">
+                <DataAnnotationsValidator />
+                <div class="form-grid">
+                    <div class="field">
+                        <label for="pname">Passenger name</label>
+                        <InputText id="pname" class="input" @bind-Value="_form.Name" />
+                        <ValidationMessage For="() => _form.Name" />
+                    </div>
+                    <div class="field">
+                        <label for="pphone">Mobile number</label>
+                        <InputText id="pphone" class="input" @bind-Value="_form.Phone" inputmode="tel" placeholder="01XXXXXXXXX" />
+                        <ValidationMessage For="() => _form.Phone" />
+                    </div>
+                </div>
+
+                <fieldset class="paychoice" style="margin-top: var(--space-4);">
+                    <legend>Payment</legend>
+                    @foreach (var opt in PayOptions)
+                    {
+                        <label class="paychoice__opt @(_form.PayKind == opt.Kind ? "is-active" : "")">
+                            <input type="radio" name="pk" checked="@(_form.PayKind == opt.Kind)" @onchange="() => _form.PayKind = opt.Kind" />
+                            <div><strong>@opt.Label</strong><span class="muted text-sm">@opt.Hint</span></div>
+                        </label>
+                    }
+                </fieldset>
+
+                @if (_form.PayKind == PayKind.Mfs)
+                {
+                    <div class="form-grid" style="margin-top: var(--space-3);">
+                        <div class="field">
+                            <label for="sprov">Wallet</label>
+                            <select id="sprov" class="select" @bind="_form.Provider">
+                                <option value="">—</option>
+                                <option value="@MfsProvider.Bkash">bKash</option>
+                                <option value="@MfsProvider.Nagad">Nagad</option>
+                                <option value="@MfsProvider.Rocket">Rocket</option>
+                                <option value="@MfsProvider.Upay">Upay</option>
+                                <option value="@MfsProvider.Other">Other</option>
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label for="stxn">Transaction ID</label>
+                            <input id="stxn" class="input" @bind="_form.TransactionId" />
+                        </div>
+                    </div>
+                }
+
+                <div class="summary__total" style="margin-top: var(--space-4);">
+                    <span>Total</span><span>৳@((_context.Fare * _selected.Count).ToString("0"))</span>
+                </div>
+
+                @if (_confirmError is not null)
+                {
+                    <div class="alert alert--error" style="margin-top: var(--space-3);">@_confirmError</div>
+                }
+
+                <div class="form-actions">
+                    <button type="button" class="btn btn--ghost" @onclick="() => _step = Step.Seats" disabled="@_busy">Back</button>
+                    <button type="submit" class="btn" disabled="@_busy">@(_busy ? "…" : "Complete booking")</button>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+}
+
+@code {
+    private enum Step { Search, Seats, Details }
+    private enum PayKind { Cash, Mfs, Reserve }
+
+    private Step _step = Step.Search;
+    private string _from = "";
+    private string _to = "";
+    private string _dateText = "";
+    private string _minDate = "";
+    private string _maxDate = "";
+    private List<string> _places = [];
+    private bool _searched;
+    private bool _busy;
+    private IReadOnlyList<TripSearchResult> _results = [];
+
+    private Guid _tripId;
+    private readonly Guid _holdToken = Guid.NewGuid();
+    private TripBookingContext? _context;
+    private List<string> _selected = [];
+    private string? _seatError;
+    private string? _confirmError;
+    private IDisposable? _subscription;
+    private Guid _staffId;
+    private readonly SellForm _form = new();
+
+    private (PayKind Kind, string Label, string Hint)[] PayOptions =>
+    [
+        (PayKind.Cash, "Cash received", "Confirm the booking now."),
+        (PayKind.Mfs, "mFS received", "Record the transaction ID; confirm now."),
+        (PayKind.Reserve, "Reserve — pay at counter", "Hold the seats; collect payment later.")
+    ];
+
+    protected override async Task OnInitializedAsync()
+    {
+        var user = (await AuthState.GetAuthenticationStateAsync()).User;
+        Guid.TryParse(user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value, out _staffId);
+
+        var today = Clock.LocalToday;
+        _dateText = today.ToString("yyyy-MM-dd");
+        _minDate = _dateText;
+        _maxDate = today.AddDays(Settings.Current.GenerationWindowDays).ToString("yyyy-MM-dd");
+
+        await using var db = await DbFactory.CreateDbContextAsync();
+        _places = await db.Locations.Where(l => l.IsActive)
+            .Select(l => l.Name).Distinct().OrderBy(n => n).ToListAsync();
+    }
+
+    private async Task RunSearch()
+    {
+        if (string.IsNullOrWhiteSpace(_from) || string.IsNullOrWhiteSpace(_to)) return;
+        _busy = true;
+        var date = DateOnly.TryParse(_dateText, out var d) ? d : Clock.LocalToday;
+        _results = await Search.SearchAsync(_from, _to, date);
+        _searched = true;
+        _busy = false;
+    }
+
+    private async Task PickTrip(Guid tripId)
+    {
+        _tripId = tripId;
+        _subscription?.Dispose();
+        _subscription = Broadcaster.Subscribe(tripId, async () =>
+        {
+            await LoadContext();
+            await InvokeAsync(StateHasChanged);
+        });
+        await LoadContext();
+        _step = Step.Seats;
+    }
+
+    private async Task LoadContext()
+    {
+        _context = await Holds.GetContextAsync(_tripId, _holdToken);
+        _selected = _context?.MySeatNumbers.ToList() ?? [];
+    }
+
+    private async Task ToggleSeat(string seatNumber)
+    {
+        if (_busy) return;
+        _busy = true;
+        _seatError = null;
+        var result = await Holds.ToggleAsync(_tripId, seatNumber, _holdToken);
+        if (!result.Succeeded) _seatError = result.Error;
+        await LoadContext();
+        _busy = false;
+    }
+
+    private async Task BackToSearch()
+    {
+        await Holds.ReleaseAllAsync(_tripId, _holdToken);
+        _subscription?.Dispose();
+        _subscription = null;
+        _context = null;
+        _selected = [];
+        _step = Step.Search;
+    }
+
+    private async Task Confirm()
+    {
+        _confirmError = null;
+        _busy = true;
+
+        var mfs = _form.PayKind == PayKind.Mfs;
+        var request = new BookingRequest
+        {
+            TripId = _tripId,
+            HoldToken = _holdToken,
+            SeatNumbers = _selected,
+            PassengerName = _form.Name,
+            PassengerPhone = _form.Phone,
+            BookedByStaffId = _staffId,
+            MarkPaidNow = _form.PayKind != PayKind.Reserve,
+            PaymentMode = PaymentMode.Counter,
+            Provider = mfs && Enum.TryParse<MfsProvider>(_form.Provider, out var p) ? p
+                : _form.PayKind == PayKind.Cash ? MfsProvider.Cash : null,
+            TransactionId = mfs ? _form.TransactionId : null
+        };
+
+        if (mfs && (request.Provider is null || string.IsNullOrWhiteSpace(_form.TransactionId)))
+        {
+            _confirmError = "Pick the wallet and enter the transaction ID.";
+            _busy = false;
+            return;
+        }
+
+        var result = await Bookings.CreateAsync(request);
+        _busy = false;
+
+        if (result.Succeeded)
+        {
+            _subscription?.Dispose();
+            _subscription = null;
+            Nav.NavigateTo($"/booking/{result.Value}");
+        }
+        else
+        {
+            _confirmError = result.Error;
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        _subscription?.Dispose();
+        if (_tripId != Guid.Empty)
+        {
+            try { await Holds.ReleaseAllAsync(_tripId, _holdToken); }
+            catch { }
+        }
+    }
+
+    private sealed class SellForm
+    {
+        [Required(ErrorMessage = "Enter the passenger's name.")]
+        [MinLength(2, ErrorMessage = "Enter the passenger's name.")]
+        public string Name { get; set; } = "";
+
+        [Required(ErrorMessage = "Enter a mobile number.")]
+        [RegularExpression(@"^(?:\+?880|0)?1\d{9}$", ErrorMessage = "Use a Bangladeshi mobile number.")]
+        public string Phone { get; set; } = "";
+
+        public PayKind PayKind { get; set; } = PayKind.Cash;
+        public string? Provider { get; set; }
+        public string? TransactionId { get; set; }
+    }
+}

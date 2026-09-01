@@ -149,3 +149,25 @@ Verified with `scratchpad/drive-m4.mjs`: search → seat map → 2-seat hold (ti
 shown) → online (bKash + txn id) and pay-at-counter bookings both land on the
 e-ticket with the right status; **two browsers on one trip — a seat held in one
 shows as "being booked" in the other**. 0 console errors.
+
+## Milestone 4b — Payment verification, booking management, staff sales
+
+- **`PaymentReviewService`** — queue of bookings needing a decision (default
+  filter: pending), scoped to a counter's own boarding/dropping point for
+  counter staff. `VerifyAsync` confirms the booking and clears the hold;
+  `RejectAsync` keeps the booking Reserved with a note so the passenger can
+  resubmit; `RecordCounterPaymentAsync` is the "cash/mFS taken in person" path.
+- **`/staff/payments`** — tabbed (Pending/Rejected/Verified/All) review queue;
+  online rows show provider/transaction id/sender/submitted time with
+  Verify/Reject; counter rows show Record payment (provider + optional txn id).
+- **`BookingAdminService`** + **`/staff/bookings`** (searchable, filterable by
+  status/payment/route) and **`/staff/bookings/{id}`** (full detail, staff
+  cancel with reason — frees the seats and notifies the live seat map).
+- **`/staff/sell`** — walk-in sale: compact search → `SeatChart` (same hold
+  service as the public flow) → passenger + Cash/mFS-now/Reserve payment.
+  Cash and mFS-now confirm immediately (`MarkPaidNow`); Reserve creates a
+  counter-pay booking staff settle later from Payments.
+
+Verified with `scratchpad/drive-m4b.mjs`: verified an online payment, recorded
+a counter cash payment, browsed bookings list → detail, and ran a full walk-in
+sale that lands Confirmed/Paid immediately. 0 console errors.

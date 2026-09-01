@@ -1,0 +1,181 @@
+@page "/staff/bookings"
+@rendermode InteractiveServer
+@using BusTicketing.Services.Bookings
+@inject BookingAdminService BookingsAdmin
+@inject RouteService Routes
+@inject IAppClock Clock
+@inject NavigationManager Nav
+@inject IStringLocalizer<SharedResource> Loc
+
+<PageTitle>@Loc["Admin.Nav.Bookings"]</PageTitle>
+
+<PageHeading Title="@Loc["Admin.Nav.Bookings"]"
+             Description="Every booking across the platform." />
+
+<div class="toolbar">
+    <input class="input" placeholder="Reference, phone or name…" value="@_search"
+           @oninput="e => ApplySearch((string?)e.Value)" />
+    <select class="select" @onchange="e => SetEnum<BookingStatus>(e, v => _status = v)">
+        <option value="">Any status</option>
+        @foreach (var s in Enum.GetValues<BookingStatus>())
+        {
+            <option value="@s" selected="@(s == _status)">@s</option>
+        }
+    </select>
+    <select class="select" @onchange="e => SetEnum<PaymentStatus>(e, v => _paymentStatus = v)">
+        <option value="">Any payment</option>
+        @foreach (var s in Enum.GetValues<PaymentStatus>())
+        {
+            <option value="@s" selected="@(s == _paymentStatus)">@s</option>
+        }
+    </select>
+    <select class="select" @onchange="OnRouteChange">
+        <option value="">All routes</option>
+        @foreach (var r in _routes)
+        {
+            <option value="@r.Id" selected="@(r.Id == _routeId)">@r.OriginLocation.Name → @r.DestinationLocation.Name</option>
+        }
+    </select>
+    <span class="toolbar__spacer"></span>
+    <span class="muted text-sm">@_page.Total bookings</span>
+</div>
+
+@if (_loading)
+{
+    <div class="loading-block">@Loc["Common.Loading"]</div>
+}
+else if (_page.Items.Count == 0)
+{
+    <div class="table-wrap"><EmptyState Title="No bookings match" /></div>
+}
+else
+{
+    <div class="table-wrap table-scroll">
+        <table class="data">
+            <thead>
+                <tr>
+                    <th>Reference</th>
+                    <th>Passenger</th>
+                    <th>Trip</th>
+                    <th>Seats</th>
+                    <th class="num">Amount</th>
+                    <th>Payment</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var b in _page.Items)
+                {
+                    <tr class="clickrow" @onclick="() => Open(b.Id)">
+                        <td>
+                            <strong>@b.Reference</strong>
+                            @if (b.IsCounterSale)
+                            {
+                                <span class="badge" style="margin-inline-start: 6px;">Counter</span>
+                            }
+                        </td>
+                        <td>@b.PassengerName<div class="muted text-sm">@b.PassengerPhone</div></td>
+                        <td>
+                            @b.RouteName
+                            <div class="muted text-sm">@Clock.ToLocal(b.DepartureTime).ToString("ddd d MMM, HH:mm")</div>
+                        </td>
+                        <td>@b.SeatSummary</td>
+                        <td class="num">৳@b.TotalAmount.ToString("0")</td>
+                        <td>
+                            <span class="text-sm">@b.PaymentMode</span>
+                            <span class="badge @PayBadge(b.PaymentStatus)">@b.PaymentStatus</span>
+                        </td>
+                        <td><span class="badge @StatusBadge(b.Status)">@b.Status</span></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    @if (_page.TotalPages > 1)
+    {
+        <div class="pager">
+            <button class="btn btn--ghost btn--sm" disabled="@(_pageNo <= 1)" @onclick="() => GoTo(_pageNo - 1)">Previous</button>
+            <span class="muted text-sm">Page @_pageNo of @_page.TotalPages</span>
+            <button class="btn btn--ghost btn--sm" disabled="@(_pageNo >= _page.TotalPages)" @onclick="() => GoTo(_pageNo + 1)">Next</button>
+        </div>
+    }
+}
+
+@code {
+    private BookingPage _page = new([], 0, 1, 30);
+    private List<BusRoute> _routes = [];
+    private string? _search;
+    private BookingStatus? _status;
+    private PaymentStatus? _paymentStatus;
+    private Guid? _routeId;
+    private int _pageNo = 1;
+    private bool _loading = true;
+    private CancellationTokenSource? _debounce;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _routes = await Routes.ActiveAsync();
+        await Reload();
+    }
+
+    private async Task Reload()
+    {
+        _loading = true;
+        _page = await BookingsAdmin.QueryAsync(_search, _status, _paymentStatus, _routeId, page: _pageNo);
+        _loading = false;
+    }
+
+    private void Open(Guid id) => Nav.NavigateTo($"/staff/bookings/{id}");
+
+    private async Task ApplySearch(string? value)
+    {
+        _search = value;
+        _pageNo = 1;
+        _debounce?.Cancel();
+        _debounce = new CancellationTokenSource();
+        try
+        {
+            await Task.Delay(250, _debounce.Token);
+            await Reload();
+            StateHasChanged();
+        }
+        catch (TaskCanceledException) { }
+    }
+
+    private async Task SetEnum<T>(ChangeEventArgs e, Action<T?> set) where T : struct, Enum
+    {
+        set(Enum.TryParse<T>((string?)e.Value, out var v) ? v : null);
+        _pageNo = 1;
+        await Reload();
+    }
+
+    private async Task OnRouteChange(ChangeEventArgs e)
+    {
+        _routeId = Guid.TryParse((string?)e.Value, out var id) ? id : null;
+        _pageNo = 1;
+        await Reload();
+    }
+
+    private async Task GoTo(int page)
+    {
+        _pageNo = Math.Clamp(page, 1, Math.Max(_page.TotalPages, 1));
+        await Reload();
+    }
+
+    private static string PayBadge(PaymentStatus s) => s switch
+    {
+        PaymentStatus.Verified => "badge--success",
+        PaymentStatus.Rejected => "badge--danger",
+        PaymentStatus.Refunded => "badge--info",
+        _ => "badge--warning"
+    };
+
+    private static string StatusBadge(BookingStatus s) => s switch
+    {
+        BookingStatus.Confirmed => "badge--success",
+        BookingStatus.Cancelled => "badge--danger",
+        BookingStatus.Expired => "badge",
+        _ => "badge--warning"
+    };
+}

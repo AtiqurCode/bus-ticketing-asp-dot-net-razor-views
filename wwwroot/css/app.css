@@ -584,3 +584,79 @@ table.data td.actions { text-align: end; white-space: nowrap; }
     border-top: 1px solid var(--line);
     margin: var(--space-2) 0;
 }
+
+/* --- Tab strip -------------------------------------------------- */
+.tabs {
+    display: inline-flex;
+    padding: 3px;
+    background: var(--surface-sunken);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    gap: 2px;
+}
+
+.tabs__tab {
+    padding: 0.4rem 0.9rem;
+    border: 0;
+    border-radius: calc(var(--radius) - 3px);
+    background: transparent;
+    font: inherit;
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: var(--ink-500);
+    cursor: pointer;
+}
+
+.tabs__tab:hover { color: var(--ink-900); }
+.tabs__tab.is-active { background: var(--surface); color: var(--green-700); box-shadow: var(--shadow-sm); }
+
+/* --- Payment review rows ------------------------------------- */
+.payrows { display: flex; flex-direction: column; gap: var(--space-3); }
+
+.payrow__grid {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr auto;
+    gap: var(--space-5);
+    align-items: center;
+}
+
+.payrow__ref {
+    font-weight: 700;
+    font-size: var(--text-lg);
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+}
+
+.payrow__pay { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
+.payrow__pay code { background: var(--surface-sunken); padding: 1px 5px; border-radius: var(--radius-sm); }
+
+.payrow__actions { display: flex; gap: var(--space-2); align-items: center; }
+
+@media (max-width: 820px) {
+    .payrow__grid { grid-template-columns: 1fr; gap: var(--space-3); }
+    .payrow__actions { flex-wrap: wrap; }
+}
+
+/* --- Detail key/value grid --------------------------------- */
+.detail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: var(--space-4);
+    align-items: start;
+}
+
+.detail-grid h3 { margin-bottom: var(--space-2); }
+
+.kv {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-4);
+    font-size: var(--text-sm);
+    padding: var(--space-1) 0;
+}
+
+.kv > span:first-child { color: var(--ink-500); flex: 0 0 auto; }
+.kv > span:last-child { text-align: end; }
+.kv code { background: var(--surface-sunken); padding: 1px 5px; border-radius: var(--radius-sm); }
+.detail-grid .btn { align-self: flex-start; margin-top: var(--space-2); }
+
+.clickrow { cursor: pointer; }

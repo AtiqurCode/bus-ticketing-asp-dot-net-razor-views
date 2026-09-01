@@ -1,0 +1,174 @@
+@page "/staff/bookings/{Id:guid}"
+@rendermode InteractiveServer
+@using BusTicketing.Services.Bookings
+@inject BookingAdminService BookingsAdmin
+@inject IAppClock Clock
+@inject AuthenticationStateProvider AuthState
+@inject NavigationManager Nav
+@inject IStringLocalizer<SharedResource> Loc
+
+<PageTitle>@(_booking?.Reference ?? "Booking")</PageTitle>
+
+@if (_booking is null)
+{
+    <div class="loading-block">@Loc["Common.Loading"]</div>
+}
+else
+{
+    var b = _booking;
+    <PageHeading Title="@b.Reference">
+        <Actions>
+            <a class="btn btn--ghost" href="/booking/@b.Reference" target="_blank">Open e-ticket</a>
+            @if (b.Status is BookingStatus.Reserved or BookingStatus.Confirmed)
+            {
+                <button class="btn btn--danger" @onclick="() => _showCancel = true">Cancel booking</button>
+            }
+        </Actions>
+    </PageHeading>
+
+    @if (_flash is not null)
+    {
+        <div class="alert alert--success" style="margin-bottom: var(--space-4);">@_flash</div>
+    }
+
+    <div class="detail-grid">
+        <div class="card"><div class="card__body stack">
+            <h3>Journey</h3>
+            <div class="kv"><span>Route</span><span>@b.Trip.Route.OriginLocation.Name → @b.Trip.Route.DestinationLocation.Name</span></div>
+            <div class="kv"><span>Departure</span><span>@Clock.ToLocal(b.Trip.DepartureTime).ToString("dddd d MMM yyyy, HH:mm")</span></div>
+            <div class="kv"><span>Arrival</span><span>@Clock.ToLocal(b.Trip.ArrivalTime).ToString("ddd d MMM, HH:mm")</span></div>
+            <div class="kv"><span>Bus</span><span>@b.Trip.Bus.Name · @b.Trip.Bus.Operator · @b.Trip.Bus.ClassLabel</span></div>
+            <div class="kv"><span>Seats</span><span><strong>@string.Join(", ", b.Seats.Select(s => s.SeatNumber))</strong> (@b.SeatCount)</span></div>
+            @if (b.BoardingCounter is not null)
+            {
+                <div class="kv"><span>Boarding</span><span>@b.BoardingCounter.Name</span></div>
+            }
+        </div></div>
+
+        <div class="card"><div class="card__body stack">
+            <h3>Passenger</h3>
+            <div class="kv"><span>Name</span><span>@b.PassengerName</span></div>
+            <div class="kv"><span>Phone</span><span>@b.PassengerPhone</span></div>
+            @if (b.PassengerEmail is not null)
+            {
+                <div class="kv"><span>Email</span><span>@b.PassengerEmail</span></div>
+            }
+            <div class="kv"><span>Booked</span><span>@Clock.ToLocal(b.CreatedAt).ToString("d MMM yyyy, HH:mm")</span></div>
+            <div class="kv"><span>Channel</span><span>@(b.BookedByStaff is not null ? $"Counter — {b.BookedByStaff.FullName}" : "Self-service")</span></div>
+        </div></div>
+
+        <div class="card"><div class="card__body stack">
+            <h3>Payment</h3>
+            <div class="kv"><span>Amount</span><span><strong>৳@b.TotalAmount.ToString("0")</strong> (@b.SeatCount × ৳@b.UnitFare.ToString("0"))</span></div>
+            <div class="kv"><span>Method</span><span>@b.PaymentMode @(b.Payment?.Provider is { } p ? $"· {p}" : "")</span></div>
+            <div class="kv"><span>Status</span><span class="badge @PayBadge(b.PaymentStatus)">@b.PaymentStatus</span></div>
+            @if (b.Payment?.TransactionId is { } txn)
+            {
+                <div class="kv"><span>Transaction ID</span><span><code>@txn</code></span></div>
+            }
+            @if (b.PaymentStatus is PaymentStatus.Pending or PaymentStatus.Rejected && b.Status != BookingStatus.Cancelled)
+            {
+                <a class="btn btn--sm" href="/staff/payments">Review in payments</a>
+            }
+        </div></div>
+
+        <div class="card"><div class="card__body stack">
+            <h3>Status</h3>
+            <div class="kv"><span>Booking</span><span class="badge @StatusBadge(b.Status)">@b.Status</span></div>
+            @if (b.HoldExpiresAt is { } exp && b.Status == BookingStatus.Reserved)
+            {
+                <div class="kv"><span>Held until</span><span>@Clock.ToLocal(exp).ToString("d MMM, HH:mm")</span></div>
+            }
+            @if (b.CancelledAt is { } c)
+            {
+                <div class="kv"><span>Cancelled</span><span>@Clock.ToLocal(c).ToString("d MMM yyyy, HH:mm")</span></div>
+                <div class="kv"><span>Reason</span><span>@b.CancellationReason</span></div>
+            }
+            @if (b.RefundAmount is { } refund)
+            {
+                <div class="kv"><span>Refund</span><span>৳@refund.ToString("0")</span></div>
+            }
+            @if (b.Notes is not null)
+            {
+                <div class="kv"><span>Notes</span><span>@b.Notes</span></div>
+            }
+        </div></div>
+    </div>
+}
+
+@if (_showCancel)
+{
+    <div class="modal-backdrop" @onclick="() => _showCancel = false">
+        <div class="modal" @onclick:stopPropagation role="dialog" aria-modal="true">
+            <h3>Cancel @_booking!.Reference</h3>
+            <p>The seats are released immediately. Refund handling follows the cancellation policy.</p>
+            <div class="field">
+                <label for="reason">Reason</label>
+                <input id="reason" class="input" @bind="_reason" @bind:event="oninput" />
+            </div>
+            @if (_cancelError is not null)
+            {
+                <div class="alert alert--error" style="margin-top: var(--space-3);">@_cancelError</div>
+            }
+            <div class="modal__actions">
+                <button class="btn btn--ghost" @onclick="() => _showCancel = false">Keep booking</button>
+                <button class="btn btn--danger" @onclick="DoCancel" disabled="@_busy">Cancel booking</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    private Booking? _booking;
+    private bool _showCancel;
+    private string _reason = "";
+    private bool _busy;
+    private string? _cancelError;
+    private string? _flash;
+    private Guid _staffId;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var user = (await AuthState.GetAuthenticationStateAsync()).User;
+        Guid.TryParse(user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value, out _staffId);
+        _booking = await BookingsAdmin.GetAsync(Id);
+        if (_booking is null)
+            Nav.NavigateTo("/staff/bookings");
+    }
+
+    private async Task DoCancel()
+    {
+        _cancelError = null;
+        _busy = true;
+        var result = await BookingsAdmin.CancelAsync(Id, _staffId, _reason);
+        _busy = false;
+        if (result.Succeeded)
+        {
+            _showCancel = false;
+            _flash = "Booking cancelled and seats released.";
+            _booking = await BookingsAdmin.GetAsync(Id);
+        }
+        else
+        {
+            _cancelError = result.Error;
+        }
+    }
+
+    private static string PayBadge(PaymentStatus s) => s switch
+    {
+        PaymentStatus.Verified => "badge--success",
+        PaymentStatus.Rejected => "badge--danger",
+        PaymentStatus.Refunded => "badge--info",
+        _ => "badge--warning"
+    };
+
+    private static string StatusBadge(BookingStatus s) => s switch
+    {
+        BookingStatus.Confirmed => "badge--success",
+        BookingStatus.Cancelled => "badge--danger",
+        BookingStatus.Expired => "badge",
+        _ => "badge--warning"
+    };
+}

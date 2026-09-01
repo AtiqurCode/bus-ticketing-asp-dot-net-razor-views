@@ -120,6 +120,7 @@
   <data name="Admin.Nav.Reports" xml:space="preserve"><value>রিপোর্ট</value></data>
   <data name="Admin.Nav.Settings" xml:space="preserve"><value>সেটিংস</value></data>
   <data name="Admin.Nav.AuditLog" xml:space="preserve"><value>অডিট লগ</value></data>
+  <data name="Admin.Nav.Sell" xml:space="preserve"><value>টিকিট বিক্রি</value></data>
   <data name="Admin.Dashboard.Welcome" xml:space="preserve"><value>স্বাগতম</value></data>
   <data name="Admin.Dashboard.Placeholder" xml:space="preserve"><value>বুকিং শুরু হলে ড্যাশবোর্ডের উইজেটগুলো এখানে আসবে।</value></data>
 

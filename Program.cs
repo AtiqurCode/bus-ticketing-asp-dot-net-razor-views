@@ -104,6 +104,7 @@ builder.Services.AddSingleton<SeatMapBroadcaster>();
 builder.Services.AddScoped<TripSearchService>();
 builder.Services.AddScoped<SeatHoldService>();
 builder.Services.AddScoped<BookingService>();
+builder.Services.AddScoped<BookingAdminService>();
 builder.Services.AddScoped<PaymentReviewService>();
 builder.Services.AddHostedService<BookingMaintenanceBackgroundService>();
 

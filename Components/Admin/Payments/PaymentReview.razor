@@ -1,0 +1,317 @@
+@page "/staff/payments"
+@rendermode InteractiveServer
+@using BusTicketing.Services.Bookings
+@inject PaymentReviewService Payments
+@inject IAppClock Clock
+@inject IDbContextFactory<AppDbContext> DbFactory
+@inject AuthenticationStateProvider AuthState
+@inject IStringLocalizer<SharedResource> Loc
+
+<PageTitle>@Loc["Admin.Nav.Payments"]</PageTitle>
+
+<PageHeading Title="@Loc["Admin.Nav.Payments"]"
+             Description="Submitted mFS transaction IDs waiting to be checked, and counter reservations waiting for payment." />
+
+<div class="toolbar">
+    <div class="tabs">
+        @foreach (var tab in Tabs)
+        {
+            <button class="tabs__tab @(_filter == tab.Value ? "is-active" : "")" @onclick="() => SetFilter(tab.Value)">
+                @tab.Label
+            </button>
+        }
+    </div>
+    <input class="input" placeholder="Reference, phone or transaction ID…" value="@_search"
+           @oninput="e => ApplySearch((string?)e.Value)" />
+    <span class="toolbar__spacer"></span>
+    <span class="muted text-sm">@_rows.Count shown</span>
+</div>
+
+@if (_flash is not null)
+{
+    <div class="alert alert--success" style="margin-bottom: var(--space-4);">@_flash</div>
+}
+
+@if (_loading)
+{
+    <div class="loading-block">@Loc["Common.Loading"]</div>
+}
+else if (_rows.Count == 0)
+{
+    <div class="table-wrap"><EmptyState Title="Nothing here" Message="No payments match this view." /></div>
+}
+else
+{
+    <div class="payrows">
+        @foreach (var r in _rows)
+        {
+            <article class="payrow card">
+                <div class="card__body payrow__grid">
+                    <div class="payrow__id">
+                        <a href="/booking/@r.Reference" target="_blank" class="payrow__ref">@r.Reference</a>
+                        <div class="muted text-sm">@r.PassengerName · @r.PassengerPhone</div>
+                        <div class="muted text-sm">@r.RouteName · @Clock.ToLocal(r.DepartureTime).ToString("ddd d MMM, HH:mm")</div>
+                        <div class="text-sm">Seats <strong>@r.SeatSummary</strong> · <strong>৳@r.Amount.ToString("0")</strong></div>
+                    </div>
+
+                    <div class="payrow__pay">
+                        <div class="badge @ModeBadge(r)">@ModeLabel(r)</div>
+                        @if (r.TransactionId is not null)
+                        {
+                            <div class="text-sm">TxnID <code>@r.TransactionId</code></div>
+                        }
+                        @if (r.SenderMsisdn is not null)
+                        {
+                            <div class="muted text-sm">from @r.SenderMsisdn</div>
+                        }
+                        @if (r.SubmittedAt is { } sub)
+                        {
+                            <div class="muted text-sm">submitted @Clock.ToLocal(sub).ToString("d MMM, HH:mm")</div>
+                        }
+                        @if (r.PaymentStatus == PaymentStatus.Rejected && r.ReviewNote is not null)
+                        {
+                            <div class="alert alert--error" style="margin-top: var(--space-2);">@r.ReviewNote</div>
+                        }
+                        @if (r.PaymentStatus == PaymentStatus.Verified && r.ReviewedBy is not null)
+                        {
+                            <div class="muted text-sm">verified by @r.ReviewedBy</div>
+                        }
+                    </div>
+
+                    <div class="payrow__actions">
+                        @if (r.PaymentStatus is PaymentStatus.Pending or PaymentStatus.Rejected && r.BookingStatus != BookingStatus.Cancelled)
+                        {
+                            @if (r.PaymentStatus != PaymentStatus.Verified && r.Mode == PaymentMode.Counter && r.TransactionId is null)
+                            {
+                                <button class="btn btn--sm" @onclick="() => OpenCounter(r)">Record payment</button>
+                            }
+                            else
+                            {
+                                <button class="btn btn--sm" @onclick="() => Verify(r)" disabled="@_busy">Verify</button>
+                            }
+                            <button class="btn btn--ghost btn--sm" @onclick="() => OpenReject(r)" disabled="@_busy">Reject</button>
+                        }
+                        else
+                        {
+                            <span class="badge @StatusBadge(r.PaymentStatus)">@r.PaymentStatus</span>
+                        }
+                    </div>
+                </div>
+            </article>
+        }
+    </div>
+}
+
+@if (_rejectTarget is not null)
+{
+    <div class="modal-backdrop" @onclick="() => _rejectTarget = null">
+        <div class="modal" @onclick:stopPropagation role="dialog" aria-modal="true">
+            <h3>Reject payment · @_rejectTarget.Reference</h3>
+            <p>The passenger keeps their seats and can resubmit before the hold expires.</p>
+            <div class="field">
+                <label for="note">Note to the passenger</label>
+                <input id="note" class="input" @bind="_rejectNote" @bind:event="oninput"
+                       placeholder="Transaction ID not found, amount mismatch…" />
+            </div>
+            @if (_modalError is not null)
+            {
+                <div class="alert alert--error" style="margin-top: var(--space-3);">@_modalError</div>
+            }
+            <div class="modal__actions">
+                <button class="btn btn--ghost" @onclick="() => _rejectTarget = null">Cancel</button>
+                <button class="btn btn--danger" @onclick="DoReject" disabled="@_busy">Reject</button>
+            </div>
+        </div>
+    </div>
+}
+
+@if (_counterTarget is not null)
+{
+    <div class="modal-backdrop" @onclick="() => _counterTarget = null">
+        <div class="modal" @onclick:stopPropagation role="dialog" aria-modal="true">
+            <h3>Record payment · @_counterTarget.Reference</h3>
+            <p>৳@_counterTarget.Amount.ToString("0") for @_counterTarget.PassengerName.</p>
+            <div class="field">
+                <label for="cprovider">Received as</label>
+                <select id="cprovider" class="select" @bind="_counterProvider">
+                    <option value="@MfsProvider.Cash">Cash</option>
+                    <option value="@MfsProvider.Bkash">bKash</option>
+                    <option value="@MfsProvider.Nagad">Nagad</option>
+                    <option value="@MfsProvider.Rocket">Rocket</option>
+                    <option value="@MfsProvider.Upay">Upay</option>
+                    <option value="@MfsProvider.Other">Other</option>
+                </select>
+            </div>
+            @if (_counterProvider != MfsProvider.Cash.ToString())
+            {
+                <div class="field">
+                    <label for="ctxn">Transaction ID</label>
+                    <input id="ctxn" class="input" @bind="_counterTxn" />
+                </div>
+            }
+            @if (_modalError is not null)
+            {
+                <div class="alert alert--error" style="margin-top: var(--space-3);">@_modalError</div>
+            }
+            <div class="modal__actions">
+                <button class="btn btn--ghost" @onclick="() => _counterTarget = null">Cancel</button>
+                <button class="btn" @onclick="DoCounter" disabled="@_busy">Confirm payment</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<PaymentReviewRow> _rows = [];
+    private PaymentStatus? _filter = PaymentStatus.Pending;
+    private string? _search;
+    private bool _loading = true;
+    private bool _busy;
+    private string? _flash;
+    private Guid _staffId;
+    private Guid? _counterScope;
+    private CancellationTokenSource? _debounce;
+
+    private PaymentReviewRow? _rejectTarget;
+    private string _rejectNote = "";
+    private PaymentReviewRow? _counterTarget;
+    private string _counterProvider = MfsProvider.Cash.ToString();
+    private string? _counterTxn;
+    private string? _modalError;
+
+    private (string Label, PaymentStatus? Value)[] Tabs =>
+    [
+        ("Pending", PaymentStatus.Pending),
+        ("Rejected", PaymentStatus.Rejected),
+        ("Verified", PaymentStatus.Verified),
+        ("All", null)
+    ];
+
+    protected override async Task OnInitializedAsync()
+    {
+        var user = (await AuthState.GetAuthenticationStateAsync()).User;
+        Guid.TryParse(user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value, out _staffId);
+
+        // Counter staff only see payments tied to their own counter.
+        if (!user.IsInRole(Roles.SuperAdmin))
+        {
+            await using var db = await DbFactory.CreateDbContextAsync();
+            _counterScope = await db.Users.Where(u => u.Id == _staffId)
+                .Select(u => u.CounterLocationId).FirstOrDefaultAsync();
+        }
+
+        await Reload();
+    }
+
+    private async Task Reload()
+    {
+        _loading = true;
+        _rows = await Payments.QueryAsync(_filter, _search, _counterScope);
+        _loading = false;
+    }
+
+    private async Task SetFilter(PaymentStatus? f)
+    {
+        _filter = f;
+        await Reload();
+    }
+
+    private async Task ApplySearch(string? value)
+    {
+        _search = value;
+        _debounce?.Cancel();
+        _debounce = new CancellationTokenSource();
+        try
+        {
+            await Task.Delay(250, _debounce.Token);
+            await Reload();
+            StateHasChanged();
+        }
+        catch (TaskCanceledException) { }
+    }
+
+    private async Task Verify(PaymentReviewRow r)
+    {
+        _busy = true;
+        _flash = null;
+        var result = await Payments.VerifyAsync(r.BookingId, _staffId);
+        _busy = false;
+        _flash = result.Succeeded ? $"{r.Reference} confirmed." : result.Error;
+        await Reload();
+    }
+
+    private void OpenReject(PaymentReviewRow r)
+    {
+        _rejectTarget = r;
+        _rejectNote = "";
+        _modalError = null;
+    }
+
+    private async Task DoReject()
+    {
+        if (_rejectTarget is null) return;
+        _modalError = null;
+        _busy = true;
+        var result = await Payments.RejectAsync(_rejectTarget.BookingId, _staffId, _rejectNote);
+        _busy = false;
+        if (result.Succeeded)
+        {
+            _flash = $"{_rejectTarget.Reference} rejected.";
+            _rejectTarget = null;
+            await Reload();
+        }
+        else
+        {
+            _modalError = result.Error;
+        }
+    }
+
+    private void OpenCounter(PaymentReviewRow r)
+    {
+        _counterTarget = r;
+        _counterProvider = MfsProvider.Cash.ToString();
+        _counterTxn = null;
+        _modalError = null;
+    }
+
+    private async Task DoCounter()
+    {
+        if (_counterTarget is null) return;
+        _modalError = null;
+        if (!Enum.TryParse<MfsProvider>(_counterProvider, out var provider))
+        {
+            _modalError = "Pick how the payment was received.";
+            return;
+        }
+        _busy = true;
+        var result = await Payments.RecordCounterPaymentAsync(_counterTarget.BookingId, _staffId, provider, _counterTxn);
+        _busy = false;
+        if (result.Succeeded)
+        {
+            _flash = $"{_counterTarget.Reference} confirmed.";
+            _counterTarget = null;
+            await Reload();
+        }
+        else
+        {
+            _modalError = result.Error;
+        }
+    }
+
+    private static string ModeLabel(PaymentReviewRow r) => r.Mode switch
+    {
+        PaymentMode.Online => $"Online · {r.Provider}",
+        _ => "Pay at counter"
+    };
+
+    private static string ModeBadge(PaymentReviewRow r) =>
+        r.Mode == PaymentMode.Online ? "badge--info" : "badge--warning";
+
+    private static string StatusBadge(PaymentStatus s) => s switch
+    {
+        PaymentStatus.Verified => "badge--success",
+        PaymentStatus.Rejected => "badge--danger",
+        PaymentStatus.Refunded => "badge--info",
+        _ => "badge--warning"
+    };
+}
