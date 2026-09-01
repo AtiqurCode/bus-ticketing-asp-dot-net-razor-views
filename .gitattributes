@@ -1,0 +1,32 @@
+# Normalize line endings: let Git decide, checkout native on each platform.
+* text=auto
+
+# Explicitly declare text files that should always use LF.
+*.cs        text diff=csharp
+*.csproj    text
+*.sln       text eol=crlf
+*.razor     text
+*.cshtml    text
+*.json      text
+*.js        text
+*.css       text
+*.scss      text
+*.html      text
+*.md        text
+*.yml       text
+*.yaml      text
+*.sh        text eol=lf
+*.sql       text
+
+# Binary files that Git must never try to normalize or diff as text.
+*.png       binary
+*.jpg       binary
+*.jpeg      binary
+*.gif       binary
+*.ico       binary
+*.pdf       binary
+*.woff      binary
+*.woff2     binary
+*.ttf       binary
+*.eot       binary
+*.dll       binary
