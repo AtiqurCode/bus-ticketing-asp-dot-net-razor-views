@@ -1,0 +1,133 @@
+@page "/staff/buses"
+@rendermode InteractiveServer
+@inject BusService Buses
+@inject NavigationManager Nav
+@inject IStringLocalizer<SharedResource> Loc
+
+<PageTitle>@Loc["Admin.Nav.Buses"]</PageTitle>
+
+<PageHeading Title="@Loc["Admin.Nav.Buses"]"
+             Description="Each bus carries its own seat plan. That plan is copied onto every trip the bus runs.">
+    <Actions>
+        <a class="btn" href="/staff/buses/new">Add bus</a>
+    </Actions>
+</PageHeading>
+
+<div class="toolbar">
+    <input class="input" placeholder="Search name or operator…" value="@_search"
+           @oninput="e => ApplySearch((string?)e.Value)" />
+    <span class="toolbar__spacer"></span>
+    <span class="muted text-sm">@_rows.Count buses</span>
+</div>
+
+@if (_loading)
+{
+    <div class="loading-block">@Loc["Common.Loading"]</div>
+}
+else if (_rows.Count == 0)
+{
+    <div class="table-wrap">
+        <EmptyState Title="No buses yet">
+            <a class="btn" href="/staff/buses/new">Add the first bus</a>
+        </EmptyState>
+    </div>
+}
+else
+{
+    <div class="table-wrap table-scroll">
+        <table class="data">
+            <thead>
+                <tr>
+                    <th>Bus</th>
+                    <th>Operator</th>
+                    <th>Class</th>
+                    <th class="num">Seats</th>
+                    <th>Status</th>
+                    <th class="actions"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var b in _rows)
+                {
+                    <tr>
+                        <td>
+                            <strong>@b.Name</strong>
+                            @if (!string.IsNullOrEmpty(b.RegistrationNumber))
+                            {
+                                <div class="muted text-sm">@b.RegistrationNumber</div>
+                            }
+                        </td>
+                        <td>@b.Operator</td>
+                        <td><span class="badge">@b.ClassLabel</span></td>
+                        <td class="num">@b.TotalSeats</td>
+                        <td><StatusPill Active="b.IsActive" /></td>
+                        <td class="actions">
+                            <div class="row-actions">
+                                <button class="icon-btn" title="Edit" @onclick="() => Edit(b.Id)">✎</button>
+                                <button class="icon-btn icon-btn--danger" title="Delete" @onclick="() => _deleteTarget = b">🗑</button>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+<ConfirmDialog Visible="_deleteTarget is not null"
+               Title="Delete this bus?"
+               Message="@($"“{_deleteTarget?.Name}” and its seat layout will be removed.")"
+               Busy="_deleting"
+               OnConfirmed="ConfirmDelete"
+               OnCancelled="() => _deleteTarget = null" />
+
+@if (_error is not null)
+{
+    <div class="alert alert--error" style="margin-top: var(--space-4);" role="alert">@_error</div>
+}
+
+@code {
+    private List<Bus> _rows = [];
+    private string? _search;
+    private bool _loading = true;
+    private Bus? _deleteTarget;
+    private bool _deleting;
+    private string? _error;
+    private CancellationTokenSource? _debounce;
+
+    protected override Task OnInitializedAsync() => Reload();
+
+    private void Edit(Guid id) => Nav.NavigateTo($"/staff/buses/{id}");
+
+    private async Task Reload()
+    {
+        _loading = true;
+        _rows = await Buses.ListAsync(_search);
+        _loading = false;
+    }
+
+    private async Task ApplySearch(string? value)
+    {
+        _search = value;
+        _debounce?.Cancel();
+        _debounce = new CancellationTokenSource();
+        try
+        {
+            await Task.Delay(250, _debounce.Token);
+            await Reload();
+            StateHasChanged();
+        }
+        catch (TaskCanceledException) { }
+    }
+
+    private async Task ConfirmDelete()
+    {
+        if (_deleteTarget is null) return;
+        _deleting = true;
+        var result = await Buses.DeleteAsync(_deleteTarget.Id);
+        _deleting = false;
+        _deleteTarget = null;
+        if (!result.Succeeded) _error = result.Error;
+        await Reload();
+    }
+}

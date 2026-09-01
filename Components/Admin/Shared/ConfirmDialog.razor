@@ -1,0 +1,32 @@
+@if (Visible)
+{
+    <div class="modal-backdrop" @onclick="OnCancel">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="confirm-title" @onclick:stopPropagation>
+            <h3 id="confirm-title">@Title</h3>
+            <p>@Message</p>
+            <div class="modal__actions">
+                <button type="button" class="btn btn--ghost" @onclick="OnCancel" disabled="@Busy">
+                    @CancelText
+                </button>
+                <button type="button" class="btn @(Danger ? "btn--danger" : "")" @onclick="OnConfirm" disabled="@Busy">
+                    @(Busy ? "…" : ConfirmText)
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool Visible { get; set; }
+    [Parameter] public string Title { get; set; } = "Are you sure?";
+    [Parameter] public string? Message { get; set; }
+    [Parameter] public string ConfirmText { get; set; } = "Confirm";
+    [Parameter] public string CancelText { get; set; } = "Cancel";
+    [Parameter] public bool Danger { get; set; } = true;
+    [Parameter] public bool Busy { get; set; }
+    [Parameter] public EventCallback OnConfirmed { get; set; }
+    [Parameter] public EventCallback OnCancelled { get; set; }
+
+    private Task OnConfirm() => OnConfirmed.InvokeAsync();
+    private Task OnCancel() => Busy ? Task.CompletedTask : OnCancelled.InvokeAsync();
+}

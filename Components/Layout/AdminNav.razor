@@ -22,14 +22,25 @@
 </nav>
 
 @code {
+    // Sections grow as each milestone lands a real page — every link here resolves.
     private IReadOnlyList<NavSection> Sections =>
     [
         new(null,
         [
             new("/staff", Loc["Admin.Nav.Dashboard"], "▚", NavLinkMatch.All)
+        ]),
+        new("Planning",
+        [
+            new("/staff/routes", Loc["Admin.Nav.Routes"], "↔", SuperAdminOnly: true),
+            new("/staff/buses", Loc["Admin.Nav.Buses"], "▤", SuperAdminOnly: true),
+            new("/staff/locations", Loc["Admin.Nav.Locations"], "◉", SuperAdminOnly: true)
+        ]),
+        new("Administration",
+        [
+            new("/staff/staff", Loc["Admin.Nav.Staff"], "◐", SuperAdminOnly: true),
+            new("/staff/settings", Loc["Admin.Nav.Settings"], "⚙", SuperAdminOnly: true),
+            new("/staff/audit", Loc["Admin.Nav.AuditLog"], "⧉", SuperAdminOnly: true)
         ])
-        // Route / fleet / schedule / booking sections are added as their
-        // milestones land so every link here always resolves.
     ];
 
     private sealed record NavSection(string? Heading, IReadOnlyList<NavItem> Items);

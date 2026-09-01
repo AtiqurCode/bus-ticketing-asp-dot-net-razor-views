@@ -1,21 +1,89 @@
 @page "/staff"
+@rendermode InteractiveServer
+@inject IDbContextFactory<AppDbContext> DbFactory
 @inject IStringLocalizer<SharedResource> Loc
 
 <PageTitle>@Loc["Admin.Nav.Dashboard"]</PageTitle>
 
 <AuthorizeView>
-    <div class="stack">
-        <div>
-            <h1>@Loc["Admin.Dashboard.Welcome"], @context.User.Identity?.Name</h1>
-            <p class="muted">@Loc["Admin.Dashboard.Placeholder"]</p>
-        </div>
+    <PageHeading Title="@($"{Loc["Admin.Dashboard.Welcome"]}, {context.User.Identity?.Name}")" />
+</AuthorizeView>
 
-        <div class="card">
-            <div class="card__body">
-                <p class="muted text-sm" style="margin: 0;">
-                    Fleet, routes, schedules and booking screens arrive in the coming milestones.
-                </p>
-            </div>
+@if (_loading)
+{
+    <div class="loading-block">@Loc["Common.Loading"]</div>
+}
+else
+{
+    <div class="tiles">
+        <div class="tile">
+            <div class="tile__label">Routes</div>
+            <div class="tile__value">@_stats.Routes</div>
+            <div class="tile__hint">@_stats.ActiveRoutes active</div>
+        </div>
+        <div class="tile">
+            <div class="tile__label">Buses</div>
+            <div class="tile__value">@_stats.Buses</div>
+            <div class="tile__hint">@_stats.Seats seats across the fleet</div>
+        </div>
+        <div class="tile">
+            <div class="tile__label">Locations</div>
+            <div class="tile__value">@_stats.Locations</div>
+            <div class="tile__hint">@_stats.Terminals terminals &amp; counters</div>
+        </div>
+        <div class="tile">
+            <div class="tile__label">Staff accounts</div>
+            <div class="tile__value">@_stats.Staff</div>
         </div>
     </div>
-</AuthorizeView>
+
+    <AuthorizeView Policy="@AuthPolicies.SuperAdmin">
+        <div class="card" style="margin-top: var(--space-5); max-width: 640px;">
+            <div class="card__body stack">
+                <h3>Get set up</h3>
+                <p class="muted text-sm" style="margin: 0;">
+                    Schedules and booking screens arrive next. Meanwhile, build out the
+                    fleet and network:
+                </p>
+                <div class="quicklinks">
+                    <a class="btn btn--ghost btn--sm" href="/staff/buses/new">Add a bus</a>
+                    <a class="btn btn--ghost btn--sm" href="/staff/routes/new">Add a route</a>
+                    <a class="btn btn--ghost btn--sm" href="/staff/locations/new">Add a terminal</a>
+                    <a class="btn btn--ghost btn--sm" href="/staff/staff/new">Add staff</a>
+                </div>
+            </div>
+        </div>
+    </AuthorizeView>
+}
+
+@code {
+    private DashboardStats _stats = new();
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await using var db = await DbFactory.CreateDbContextAsync();
+        _stats = new DashboardStats
+        {
+            Routes = await db.Routes.CountAsync(),
+            ActiveRoutes = await db.Routes.CountAsync(r => r.IsActive),
+            Buses = await db.Buses.CountAsync(),
+            Seats = await db.Buses.SumAsync(b => (int?)b.TotalSeats) ?? 0,
+            Locations = await db.Locations.CountAsync(),
+            Terminals = await db.Locations.CountAsync(l => l.Type != LocationType.City),
+            Staff = await db.Users.CountAsync()
+        };
+        _loading = false;
+    }
+
+    private sealed class DashboardStats
+    {
+        public int Routes { get; set; }
+        public int ActiveRoutes { get; set; }
+        public int Buses { get; set; }
+        public int Seats { get; set; }
+        public int Locations { get; set; }
+        public int Terminals { get; set; }
+        public int Staff { get; set; }
+    }
+}

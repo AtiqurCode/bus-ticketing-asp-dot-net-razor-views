@@ -1,0 +1,132 @@
+@page "/staff/routes"
+@rendermode InteractiveServer
+@inject RouteService Routes
+@inject NavigationManager Nav
+@inject IStringLocalizer<SharedResource> Loc
+
+<PageTitle>@Loc["Admin.Nav.Routes"]</PageTitle>
+
+<PageHeading Title="@Loc["Admin.Nav.Routes"]"
+             Description="An origin → destination pair. Schedules and trips run along a route.">
+    <Actions>
+        <a class="btn" href="/staff/routes/new">Add route</a>
+    </Actions>
+</PageHeading>
+
+<div class="toolbar">
+    <input class="input" placeholder="Search by city…" value="@_search"
+           @oninput="e => ApplySearch((string?)e.Value)" />
+    <span class="toolbar__spacer"></span>
+    <span class="muted text-sm">@_rows.Count routes</span>
+</div>
+
+@if (_loading)
+{
+    <div class="loading-block">@Loc["Common.Loading"]</div>
+}
+else if (_rows.Count == 0)
+{
+    <div class="table-wrap">
+        <EmptyState Title="No routes yet">
+            <a class="btn" href="/staff/routes/new">Add the first route</a>
+        </EmptyState>
+    </div>
+}
+else
+{
+    <div class="table-wrap table-scroll">
+        <table class="data">
+            <thead>
+                <tr>
+                    <th>Route</th>
+                    <th class="num">Distance</th>
+                    <th class="num">Duration</th>
+                    <th>Status</th>
+                    <th class="actions"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var r in _rows)
+                {
+                    <tr>
+                        <td>
+                            <strong>@r.OriginLocation.Name</strong>
+                            <span class="muted"> → </span>
+                            <strong>@r.DestinationLocation.Name</strong>
+                        </td>
+                        <td class="num">@r.DistanceKm.ToString("0.#") km</td>
+                        <td class="num">@Format(r.ApproxDurationMinutes)</td>
+                        <td><StatusPill Active="r.IsActive" /></td>
+                        <td class="actions">
+                            <div class="row-actions">
+                                <button class="icon-btn" title="Edit" @onclick="() => Edit(r.Id)">✎</button>
+                                <button class="icon-btn icon-btn--danger" title="Delete" @onclick="() => _deleteTarget = r">🗑</button>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+<ConfirmDialog Visible="_deleteTarget is not null"
+               Title="Delete this route?"
+               Message="@($"{_deleteTarget?.OriginLocation.Name} → {_deleteTarget?.DestinationLocation.Name}")"
+               Busy="_deleting"
+               OnConfirmed="ConfirmDelete"
+               OnCancelled="() => _deleteTarget = null" />
+
+@if (_error is not null)
+{
+    <div class="alert alert--error" style="margin-top: var(--space-4);" role="alert">@_error</div>
+}
+
+@code {
+    private List<BusRoute> _rows = [];
+    private string? _search;
+    private bool _loading = true;
+    private BusRoute? _deleteTarget;
+    private bool _deleting;
+    private string? _error;
+    private CancellationTokenSource? _debounce;
+
+    protected override Task OnInitializedAsync() => Reload();
+
+    private void Edit(Guid id) => Nav.NavigateTo($"/staff/routes/{id}");
+
+    private async Task Reload()
+    {
+        _loading = true;
+        _rows = await Routes.ListAsync(_search);
+        _loading = false;
+    }
+
+    private async Task ApplySearch(string? value)
+    {
+        _search = value;
+        _debounce?.Cancel();
+        _debounce = new CancellationTokenSource();
+        try
+        {
+            await Task.Delay(250, _debounce.Token);
+            await Reload();
+            StateHasChanged();
+        }
+        catch (TaskCanceledException) { }
+    }
+
+    private async Task ConfirmDelete()
+    {
+        if (_deleteTarget is null) return;
+        _deleting = true;
+        var result = await Routes.DeleteAsync(_deleteTarget.Id);
+        _deleting = false;
+        _deleteTarget = null;
+        if (!result.Succeeded) _error = result.Error;
+        await Reload();
+    }
+
+    private static string Format(int minutes) =>
+        minutes <= 0 ? "—" : $"{minutes / 60}h {minutes % 60:00}m";
+}

@@ -61,6 +61,51 @@ public sealed class AuditService(
         }
     }
 
+    public async Task<AuditPage> QueryAsync(
+        string? action = null, string? search = null,
+        DateTimeOffset? from = null, DateTimeOffset? to = null,
+        int page = 1, int pageSize = 40, CancellationToken ct = default)
+    {
+        await using var db = await dbFactory.CreateDbContextAsync(ct);
+        var query = db.AuditLogs.AsNoTracking().AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(action))
+            query = query.Where(a => a.Action == action);
+        if (from is not null)
+            query = query.Where(a => a.CreatedAt >= from);
+        if (to is not null)
+            query = query.Where(a => a.CreatedAt < to);
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var term = $"%{search.Trim()}%";
+            query = query.Where(a =>
+                EF.Functions.ILike(a.Summary, term) ||
+                EF.Functions.ILike(a.ActorName, term) ||
+                EF.Functions.ILike(a.EntityType, term));
+        }
+
+        var total = await query.CountAsync(ct);
+        var items = await query
+            .OrderByDescending(a => a.CreatedAt)
+            .Skip((Math.Max(page, 1) - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(ct);
+
+        return new AuditPage(items, total, page, pageSize);
+    }
+
+    public async Task<IReadOnlyList<string>> DistinctActionsAsync(CancellationToken ct = default)
+    {
+        await using var db = await dbFactory.CreateDbContextAsync(ct);
+        return await db.AuditLogs.AsNoTracking()
+            .Select(a => a.Action).Distinct().OrderBy(a => a).ToListAsync(ct);
+    }
+
     private static Guid? ParseUserId(ClaimsPrincipal? actor) =>
         Guid.TryParse(actor?.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : null;
+}
+
+public sealed record AuditPage(IReadOnlyList<AuditLog> Items, int Total, int Page, int PageSize)
+{
+    public int TotalPages => (int)Math.Ceiling(Total / (double)PageSize);
 }

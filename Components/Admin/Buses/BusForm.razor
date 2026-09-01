@@ -1,0 +1,178 @@
+@page "/staff/buses/new"
+@page "/staff/buses/{Id:guid}"
+@rendermode RenderModes.ServerNoPrerender
+@inject BusService Buses
+@inject NavigationManager Nav
+
+<PageTitle>@(IsNew ? "Add bus" : "Edit bus")</PageTitle>
+
+<PageHeading Title="@(IsNew ? "Add a bus" : $"Edit {_model.Name}")"
+             Description="The seat layout below becomes the seat map on every trip this bus runs." />
+
+@if (_loading)
+{
+    <div class="loading-block">Loading…</div>
+}
+else
+{
+    <EditForm Model="_model" OnValidSubmit="Save">
+        <DataAnnotationsValidator />
+
+        <div class="card" style="max-width: 720px;">
+            <div class="card__body">
+                <div class="form-grid">
+                    <div class="field">
+                        <label for="name">Bus name</label>
+                        <InputText id="name" class="input" @bind-Value="_model.Name" placeholder="Volvo B11R — 01" />
+                        <ValidationMessage For="() => _model.Name" />
+                    </div>
+                    <div class="field">
+                        <label for="operator">Operator</label>
+                        <InputText id="operator" class="input" @bind-Value="_model.Operator" placeholder="Hanif Enterprise" />
+                        <ValidationMessage For="() => _model.Operator" />
+                    </div>
+                    <div class="field">
+                        <label for="reg">Registration no.</label>
+                        <InputText id="reg" class="input" @bind-Value="_model.RegistrationNumber" placeholder="Dhaka Metro-b 11-2345" />
+                    </div>
+                    <div class="field">
+                        <label for="class">Class</label>
+                        <InputSelect id="class" class="select" @bind-Value="_model.Class">
+                            @foreach (var c in Enum.GetValues<BusClass>())
+                            {
+                                <option value="@c">@Label(c)</option>
+                            }
+                        </InputSelect>
+                    </div>
+                    <div class="field col-span-2">
+                        <label for="amenities">Amenities</label>
+                        <InputText id="amenities" class="input" @bind-Value="_model.Amenities"
+                                   placeholder="Wi-Fi, blanket, water, charging port" />
+                    </div>
+                    <label class="checkline col-span-2">
+                        <InputCheckbox @bind-Value="_model.IsActive" />
+                        <span>Available for scheduling</span>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <div class="stack" style="margin-top: var(--space-5); max-width: 720px;">
+            <h3>Seat layout</h3>
+            <SeatLayoutEditor @bind-Value="_model.SeatMap" />
+        </div>
+
+        @if (_error is not null)
+        {
+            <div class="alert alert--error" style="margin-top: var(--space-4); max-width: 720px;" role="alert">@_error</div>
+        }
+
+        <div class="form-actions" style="max-width: 720px;">
+            <button type="submit" class="btn" disabled="@_saving">@(_saving ? "Saving…" : "Save bus")</button>
+            <a class="btn btn--ghost" href="/staff/buses">Cancel</a>
+            <span class="form-actions__spacer"></span>
+            <span class="muted text-sm">@_model.SeatMap.SeatCount seats</span>
+        </div>
+    </EditForm>
+}
+
+@code {
+    [Parameter] public Guid? Id { get; set; }
+
+    private BusEditModel _model = new();
+    private bool _loading = true;
+    private bool _saving;
+    private string? _error;
+
+    private bool IsNew => Id is null;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _loading = true;
+        if (Id is { } id)
+        {
+            var existing = await Buses.GetAsync(id);
+            if (existing is null)
+            {
+                Nav.NavigateTo("/staff/buses");
+                return;
+            }
+            _model = BusEditModel.From(existing);
+        }
+        _loading = false;
+    }
+
+    private async Task Save()
+    {
+        _error = null;
+        _saving = true;
+
+        var entity = _model.ToEntity();
+        string? error;
+        if (IsNew)
+        {
+            var r = await Buses.CreateAsync(entity);
+            error = r.Succeeded ? null : r.Error;
+        }
+        else
+        {
+            entity.Id = Id!.Value;
+            var r = await Buses.UpdateAsync(entity);
+            error = r.Succeeded ? null : r.Error;
+        }
+
+        _saving = false;
+        if (error is null)
+            Nav.NavigateTo("/staff/buses");
+        else
+            _error = error;
+    }
+
+    private static string Label(BusClass c) => c switch
+    {
+        BusClass.NonAc => "Non-AC",
+        BusClass.Ac => "AC",
+        BusClass.AcSleeper => "AC Sleeper",
+        BusClass.AcBusiness => "AC Business",
+        _ => c.ToString()
+    };
+
+    private sealed class BusEditModel
+    {
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Name the bus.")]
+        [System.ComponentModel.DataAnnotations.MaxLength(120)]
+        public string Name { get; set; } = "";
+
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Set the operator.")]
+        [System.ComponentModel.DataAnnotations.MaxLength(120)]
+        public string Operator { get; set; } = "";
+
+        public string? RegistrationNumber { get; set; }
+        public BusClass Class { get; set; } = BusClass.Ac;
+        public string? Amenities { get; set; }
+        public bool IsActive { get; set; } = true;
+        public SeatMap SeatMap { get; set; } = SeatMap.Empty();
+
+        public static BusEditModel From(Bus b) => new()
+        {
+            Name = b.Name,
+            Operator = b.Operator,
+            RegistrationNumber = b.RegistrationNumber,
+            Class = b.Class,
+            Amenities = b.Amenities,
+            IsActive = b.IsActive,
+            SeatMap = b.SeatMap
+        };
+
+        public Bus ToEntity() => new()
+        {
+            Name = Name,
+            Operator = Operator,
+            RegistrationNumber = RegistrationNumber,
+            Class = Class,
+            Amenities = Amenities,
+            IsActive = IsActive,
+            SeatMap = SeatMap
+        };
+    }
+}

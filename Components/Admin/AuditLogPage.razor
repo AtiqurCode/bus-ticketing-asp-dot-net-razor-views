@@ -1,0 +1,121 @@
+@page "/staff/audit"
+@rendermode InteractiveServer
+@attribute [Authorize(Policy = AuthPolicies.SuperAdmin)]
+@inject AuditService Audit
+@inject IStringLocalizer<SharedResource> Loc
+
+<PageTitle>@Loc["Admin.Nav.AuditLog"]</PageTitle>
+
+<PageHeading Title="@Loc["Admin.Nav.AuditLog"]"
+             Description="Every consequential staff action, newest first." />
+
+<div class="toolbar">
+    <input class="input" placeholder="Search summary or person…" value="@_search"
+           @oninput="e => ApplySearch((string?)e.Value)" />
+    <select class="select" @onchange="OnActionChange">
+        <option value="">All actions</option>
+        @foreach (var a in _actions)
+        {
+            <option value="@a" selected="@(a == _action)">@a</option>
+        }
+    </select>
+    <span class="toolbar__spacer"></span>
+    <span class="muted text-sm">@_page.Total entries</span>
+</div>
+
+@if (_loading)
+{
+    <div class="loading-block">@Loc["Common.Loading"]</div>
+}
+else if (_page.Items.Count == 0)
+{
+    <div class="table-wrap"><EmptyState Title="Nothing logged yet" /></div>
+}
+else
+{
+    <div class="table-wrap table-scroll">
+        <table class="data">
+            <thead>
+                <tr>
+                    <th>When</th>
+                    <th>Who</th>
+                    <th>Action</th>
+                    <th>Summary</th>
+                    <th>Entity</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var e in _page.Items)
+                {
+                    <tr>
+                        <td class="muted text-sm" style="white-space: nowrap;">@e.CreatedAt.ToLocalTime().ToString("d MMM yyyy, HH:mm")</td>
+                        <td>@e.ActorName</td>
+                        <td><code class="audit-action">@e.Action</code></td>
+                        <td>@e.Summary</td>
+                        <td class="muted text-sm">@e.EntityType</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    @if (_page.TotalPages > 1)
+    {
+        <div class="pager">
+            <button class="btn btn--ghost btn--sm" disabled="@(_pageNo <= 1)" @onclick="() => GoTo(_pageNo - 1)">Previous</button>
+            <span class="muted text-sm">Page @_pageNo of @_page.TotalPages</span>
+            <button class="btn btn--ghost btn--sm" disabled="@(_pageNo >= _page.TotalPages)" @onclick="() => GoTo(_pageNo + 1)">Next</button>
+        </div>
+    }
+}
+
+@code {
+    private AuditPage _page = new([], 0, 1, 40);
+    private IReadOnlyList<string> _actions = [];
+    private string? _search;
+    private string? _action;
+    private int _pageNo = 1;
+    private bool _loading = true;
+    private CancellationTokenSource? _debounce;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _actions = await Audit.DistinctActionsAsync();
+        await Reload();
+    }
+
+    private async Task Reload()
+    {
+        _loading = true;
+        _page = await Audit.QueryAsync(_action, _search, page: _pageNo);
+        _loading = false;
+    }
+
+    private async Task ApplySearch(string? value)
+    {
+        _search = value;
+        _pageNo = 1;
+        _debounce?.Cancel();
+        _debounce = new CancellationTokenSource();
+        try
+        {
+            await Task.Delay(250, _debounce.Token);
+            await Reload();
+            StateHasChanged();
+        }
+        catch (TaskCanceledException) { }
+    }
+
+    private async Task OnActionChange(ChangeEventArgs e)
+    {
+        _action = string.IsNullOrEmpty((string?)e.Value) ? null : (string?)e.Value;
+        _pageNo = 1;
+        await Reload();
+    }
+
+    private async Task GoTo(int page)
+    {
+        _pageNo = Math.Clamp(page, 1, Math.Max(_page.TotalPages, 1));
+        await Reload();
+    }
+}

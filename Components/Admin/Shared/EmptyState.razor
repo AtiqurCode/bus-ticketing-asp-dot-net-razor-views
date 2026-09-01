@@ -1,0 +1,17 @@
+<div class="empty">
+    <h3>@Title</h3>
+    @if (ChildContent is not null)
+    {
+        <div>@ChildContent</div>
+    }
+    else if (Message is not null)
+    {
+        <p>@Message</p>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Title { get; set; } = "";
+    [Parameter] public string? Message { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

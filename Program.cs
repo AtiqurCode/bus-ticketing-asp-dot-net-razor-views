@@ -4,6 +4,7 @@ using BusTicketing.Data;
 using BusTicketing.Data.Seed;
 using BusTicketing.Domain;
 using BusTicketing.Services;
+using BusTicketing.Services.Admin;
 using BusTicketing.Services.Auth;
 using BusTicketing.Services.Localization;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -88,6 +89,10 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton<SettingsService>();
 builder.Services.AddSingleton<IAppClock, AppClock>();
 builder.Services.AddScoped<AuditService>();
+builder.Services.AddScoped<LocationService>();
+builder.Services.AddScoped<BusService>();
+builder.Services.AddScoped<RouteService>();
+builder.Services.AddScoped<StaffService>();
 
 // --- Blazor --------------------------------------------------
 builder.Services.AddRazorComponents()

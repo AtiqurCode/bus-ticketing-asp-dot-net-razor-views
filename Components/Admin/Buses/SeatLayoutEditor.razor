@@ -1,0 +1,242 @@
+@* Visual seat-plan editor. Binds a SeatMap via @bind-Value. *@
+
+<div class="seatmap-editor">
+    <div class="seatmap-editor__toolbar">
+        <div class="field field--inline">
+            <label>Preset</label>
+            <select class="select" @bind="_preset">
+                <option value="2-2">2 + 2</option>
+                <option value="2-1">2 + 1</option>
+                <option value="1-2">1 + 2</option>
+                <option value="1-1">1 + 1</option>
+            </select>
+        </div>
+        <div class="field field--inline">
+            <label>Rows</label>
+            <input class="input input--tiny" type="number" min="1" max="20" @bind="_presetRows" />
+        </div>
+        <label class="checkline">
+            <input type="checkbox" @bind="_presetBackRow" />
+            <span>Full back row</span>
+        </label>
+        <button type="button" class="btn btn--ghost btn--sm" @onclick="Generate">Generate layout</button>
+        <span class="seatmap-editor__spacer"></span>
+        <button type="button" class="btn btn--ghost btn--sm" @onclick="Renumber" disabled="@(Map.SeatCount == 0)">
+            Renumber
+        </button>
+    </div>
+
+    @if (Map.Columns == 0 || Map.Rows == 0)
+    {
+        <div class="seatmap-editor__hint">
+            Pick a preset and press <strong>Generate layout</strong> to start, then click cells to adjust.
+        </div>
+    }
+    else
+    {
+        <div class="seatmap-editor__grid-wrap">
+            <div class="seatmap-editor__front">Front of bus</div>
+            <div class="seatmap-editor__grid"
+                 style="grid-template-columns: repeat(@Map.Columns, 44px);">
+                @for (var row = 0; row < Map.Rows; row++)
+                {
+                    var r = row;
+                    @for (var col = 0; col < Map.Columns; col++)
+                    {
+                        var c = col;
+                        var seat = SeatAt(r, c);
+                        if (seat is not null)
+                        {
+                            <button type="button"
+                                    class="seat @TypeClass(seat.Type) @(IsSelected(seat) ? "is-selected" : "")"
+                                    title="@seat.Number"
+                                    @onclick="() => Select(seat)">
+                                @seat.Number
+                            </button>
+                        }
+                        else
+                        {
+                            <button type="button" class="seat seat--empty" title="Add a seat here"
+                                    @onclick="() => AddSeat(r, c)">+</button>
+                        }
+                    }
+                }
+            </div>
+        </div>
+
+        <div class="seatmap-editor__footer">
+            <div class="seatmap-editor__rowbtns">
+                <button type="button" class="btn btn--ghost btn--sm" @onclick="AddRow">+ Row</button>
+                <button type="button" class="btn btn--ghost btn--sm" @onclick="RemoveRow" disabled="@(Map.Rows <= 1)">− Row</button>
+                <button type="button" class="btn btn--ghost btn--sm" @onclick="AddColumn">+ Column</button>
+                <button type="button" class="btn btn--ghost btn--sm" @onclick="RemoveColumn" disabled="@(Map.Columns <= 1)">− Column</button>
+            </div>
+            <div class="seatmap-editor__count">@Map.SeatCount seats</div>
+        </div>
+
+        @if (_selected is not null)
+        {
+            <div class="seatmap-editor__inspector">
+                <div class="field field--inline">
+                    <label>Seat</label>
+                    <input class="input input--tiny" value="@_selected.Number"
+                           @onchange="e => Rename((string?)e.Value)" maxlength="4" />
+                </div>
+                <div class="field field--inline">
+                    <label>Type</label>
+                    <select class="select" @onchange="OnTypeChange">
+                        @foreach (var t in Enum.GetValues<SeatType>())
+                        {
+                            <option value="@t" selected="@(t == _selected.Type)">@t</option>
+                        }
+                    </select>
+                </div>
+                <button type="button" class="btn btn--danger btn--sm" @onclick="RemoveSelected">Remove seat</button>
+            </div>
+        }
+
+        <div class="seatmap-editor__legend">
+            <span><i class="dot dot--regular"></i> Regular</span>
+            <span><i class="dot dot--window"></i> Window</span>
+            <span><i class="dot dot--premium"></i> Premium</span>
+            <span><i class="dot dot--ladies"></i> Ladies</span>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public SeatMap Value { get; set; } = SeatMap.Empty();
+    [Parameter] public EventCallback<SeatMap> ValueChanged { get; set; }
+
+    private SeatMap Map => Value;
+
+    private string _preset = "2-2";
+    private int _presetRows = 11;
+    private bool _presetBackRow = true;
+    private SeatCell? _selected;
+
+    private SeatCell? SeatAt(int row, int col) =>
+        Map.Seats.FirstOrDefault(s => s.Row == row && s.Column == col);
+
+    private bool IsSelected(SeatCell seat) => ReferenceEquals(seat, _selected);
+
+    private async Task Generate()
+    {
+        var (left, right) = _preset switch
+        {
+            "2-1" => (2, 1),
+            "1-2" => (1, 2),
+            "1-1" => (1, 1),
+            _ => (2, 2)
+        };
+        _selected = null;
+        await Commit(SeatMapFactory.Standard(left, right, _presetRows, _presetBackRow));
+    }
+
+    private async Task AddSeat(int row, int col)
+    {
+        Map.Seats.Add(new SeatCell
+        {
+            Row = row,
+            Column = col,
+            Deck = 1,
+            Number = NextLabel(row),
+            Type = col == 0 || col == Map.Columns - 1 ? SeatType.Window : SeatType.Regular
+        });
+        await Commit(Map);
+    }
+
+    private void Select(SeatCell seat) => _selected = seat;
+
+    private async Task Rename(string? value)
+    {
+        if (_selected is null || string.IsNullOrWhiteSpace(value)) return;
+        _selected.Number = value.Trim().ToUpperInvariant();
+        await Commit(Map);
+    }
+
+    private async Task OnTypeChange(ChangeEventArgs e)
+    {
+        if (_selected is null) return;
+        if (Enum.TryParse<SeatType>((string?)e.Value, out var type))
+        {
+            _selected.Type = type;
+            await Commit(Map);
+        }
+    }
+
+    private async Task RemoveSelected()
+    {
+        if (_selected is null) return;
+        Map.Seats.Remove(_selected);
+        _selected = null;
+        await Commit(Map);
+    }
+
+    private async Task AddRow()
+    {
+        Map.Rows++;
+        await Commit(Map);
+    }
+
+    private async Task RemoveRow()
+    {
+        if (Map.Rows <= 1) return;
+        var last = Map.Rows - 1;
+        Map.Seats.RemoveAll(s => s.Row == last);
+        Map.Rows--;
+        _selected = null;
+        await Commit(Map);
+    }
+
+    private async Task AddColumn()
+    {
+        Map.Columns++;
+        await Commit(Map);
+    }
+
+    private async Task RemoveColumn()
+    {
+        if (Map.Columns <= 1) return;
+        var last = Map.Columns - 1;
+        Map.Seats.RemoveAll(s => s.Column == last);
+        Map.Columns--;
+        _selected = null;
+        await Commit(Map);
+    }
+
+    private async Task Renumber()
+    {
+        foreach (var group in Map.Seats.GroupBy(s => s.Row).OrderBy(g => g.Key))
+        {
+            var letter = SeatMapFactory.LetterFor(group.Key);
+            var i = 1;
+            foreach (var seat in group.OrderBy(s => s.Column))
+                seat.Number = $"{letter}{i++}";
+        }
+        await Commit(Map);
+    }
+
+    private string NextLabel(int row)
+    {
+        var letter = SeatMapFactory.LetterFor(row);
+        var n = Map.Seats.Count(s => s.Row == row) + 1;
+        var label = $"{letter}{n}";
+        while (Map.Seats.Any(s => s.Number == label)) label = $"{letter}{++n}";
+        return label;
+    }
+
+    private Task Commit(SeatMap map)
+    {
+        Value = map;
+        return ValueChanged.InvokeAsync(map);
+    }
+
+    private static string TypeClass(SeatType type) => type switch
+    {
+        SeatType.Window => "seat--window",
+        SeatType.Premium => "seat--premium",
+        SeatType.Ladies => "seat--ladies",
+        _ => "seat--regular"
+    };
+}

@@ -1,0 +1,196 @@
+@page "/staff/settings"
+@rendermode RenderModes.ServerNoPrerender
+@attribute [Authorize(Policy = AuthPolicies.SuperAdmin)]
+@inject SettingsService Settings
+@inject AuditService Audit
+@inject IStringLocalizer<SharedResource> Loc
+
+<PageTitle>@Loc["Admin.Nav.Settings"]</PageTitle>
+
+<PageHeading Title="@Loc["Admin.Nav.Settings"]"
+             Description="Platform-wide defaults. Changes take effect immediately." />
+
+@if (_loading)
+{
+    <div class="loading-block">@Loc["Common.Loading"]</div>
+}
+else
+{
+    <EditForm Model="_model" OnValidSubmit="Save">
+        <DataAnnotationsValidator />
+
+        <div class="card form-card">
+            <div class="card__body stack">
+                <h3>Brand</h3>
+                <div class="form-grid">
+                    <div class="field">
+                        <label for="site">Site name</label>
+                        <InputText id="site" class="input" @bind-Value="_model.SiteName" />
+                    </div>
+                    <div class="field">
+                        <label for="support">Support phone</label>
+                        <InputText id="support" class="input" @bind-Value="_model.SupportPhone" />
+                    </div>
+                    <div class="field">
+                        <label for="currency">Currency code</label>
+                        <InputText id="currency" class="input" @bind-Value="_model.CurrencyCode" maxlength="3" />
+                    </div>
+                    <div class="field">
+                        <label for="prefix">Ticket reference prefix</label>
+                        <InputText id="prefix" class="input" @bind-Value="_model.BookingReferencePrefix" maxlength="6" />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card form-card" style="margin-top: var(--space-5);">
+            <div class="card__body stack">
+                <h3>Trip generation</h3>
+                <div class="form-grid">
+                    <div class="field">
+                        <label for="window">Booking window (days ahead)</label>
+                        <InputNumber id="window" class="input" @bind-Value="_model.GenerationWindowDays" />
+                    </div>
+                    <div class="field">
+                        <label for="tz">Time zone</label>
+                        <InputText id="tz" class="input" @bind-Value="_model.TimeZoneId" />
+                        <span class="muted text-sm">IANA id, e.g. Asia/Dhaka</span>
+                    </div>
+                    <div class="field col-span-2">
+                        <label for="intervals">Interval options (minutes, comma-separated)</label>
+                        <InputText id="intervals" class="input" @bind-Value="_model.IntervalOptionsCsv" />
+                    </div>
+                    <label class="checkline col-span-2">
+                        <InputCheckbox @bind-Value="_model.AutoGenerationPaused" />
+                        <span>Pause automatic trip generation (maintenance)</span>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <div class="card form-card" style="margin-top: var(--space-5);">
+            <div class="card__body stack">
+                <h3>Holds &amp; payment windows</h3>
+                <div class="form-grid">
+                    <div class="field">
+                        <label for="hold">Seat hold during checkout (minutes)</label>
+                        <InputNumber id="hold" class="input" @bind-Value="_model.SeatHoldMinutes" />
+                    </div>
+                    <div class="field">
+                        <label for="online">Unpaid online booking expires after (hours)</label>
+                        <InputNumber id="online" class="input" @bind-Value="_model.PendingOnlinePaymentExpiryHours" />
+                    </div>
+                    <div class="field">
+                        <label for="counter">Counter reservation held for (hours)</label>
+                        <InputNumber id="counter" class="input" @bind-Value="_model.CounterReservationExpiryHours" />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @if (_error is not null)
+        {
+            <div class="alert alert--error" style="margin-top: var(--space-4); max-width: 720px;" role="alert">@_error</div>
+        }
+        @if (_saved)
+        {
+            <div class="alert alert--success" style="margin-top: var(--space-4); max-width: 720px;">Settings saved.</div>
+        }
+
+        <div class="form-actions" style="max-width: 720px;">
+            <button type="submit" class="btn" disabled="@_saving">@(_saving ? "Saving…" : "Save settings")</button>
+        </div>
+    </EditForm>
+}
+
+@code {
+    private SettingsModel _model = new();
+    private bool _loading = true;
+    private bool _saving;
+    private bool _saved;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var current = await Settings.GetAsync();
+        _model = SettingsModel.From(current);
+        _loading = false;
+    }
+
+    private async Task Save()
+    {
+        _error = null;
+        _saved = false;
+
+        if (!TimeZoneExists(_model.TimeZoneId))
+        {
+            _error = $"“{_model.TimeZoneId}” isn't a known time zone.";
+            return;
+        }
+        if (!_model.IntervalOptions().Any())
+        {
+            _error = "Enter at least one interval, e.g. 60,120,180.";
+            return;
+        }
+        if (_model.GenerationWindowDays is < 1 or > 60)
+        {
+            _error = "The booking window should be between 1 and 60 days.";
+            return;
+        }
+        if (_model.SeatHoldMinutes is < 1 or > 60
+            || _model.PendingOnlinePaymentExpiryHours is < 1 or > 168
+            || _model.CounterReservationExpiryHours is < 1 or > 168)
+        {
+            _error = "Hold and expiry windows are out of a sensible range.";
+            return;
+        }
+
+        _saving = true;
+        await Settings.SaveAsync(_model.ToEntity());
+        Settings.Invalidate();
+        await Audit.RecordAsync(AuditActions.SettingsUpdate, "AppSettings", "1", "Updated platform settings");
+        _saving = false;
+        _saved = true;
+    }
+
+    private static bool TimeZoneExists(string id)
+    {
+        try { TimeZoneInfo.FindSystemTimeZoneById(id); return true; }
+        catch { return false; }
+    }
+
+    private sealed class SettingsModel : AppSettings
+    {
+        public static SettingsModel From(AppSettings s) => new()
+        {
+            Id = s.Id,
+            GenerationWindowDays = s.GenerationWindowDays,
+            AutoGenerationPaused = s.AutoGenerationPaused,
+            IntervalOptionsCsv = s.IntervalOptionsCsv,
+            SeatHoldMinutes = s.SeatHoldMinutes,
+            PendingOnlinePaymentExpiryHours = s.PendingOnlinePaymentExpiryHours,
+            CounterReservationExpiryHours = s.CounterReservationExpiryHours,
+            TimeZoneId = s.TimeZoneId,
+            CurrencyCode = s.CurrencyCode,
+            BookingReferencePrefix = s.BookingReferencePrefix,
+            SiteName = s.SiteName,
+            SupportPhone = s.SupportPhone
+        };
+
+        public AppSettings ToEntity() => new()
+        {
+            Id = AppSettings.SingletonId,
+            GenerationWindowDays = GenerationWindowDays,
+            AutoGenerationPaused = AutoGenerationPaused,
+            IntervalOptionsCsv = IntervalOptionsCsv.Trim(),
+            SeatHoldMinutes = SeatHoldMinutes,
+            PendingOnlinePaymentExpiryHours = PendingOnlinePaymentExpiryHours,
+            CounterReservationExpiryHours = CounterReservationExpiryHours,
+            TimeZoneId = TimeZoneId.Trim(),
+            CurrencyCode = CurrencyCode.Trim().ToUpperInvariant(),
+            BookingReferencePrefix = BookingReferencePrefix.Trim().ToUpperInvariant(),
+            SiteName = SiteName.Trim(),
+            SupportPhone = SupportPhone.Trim()
+        };
+    }
+}

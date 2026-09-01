@@ -1,0 +1,167 @@
+@page "/staff/locations"
+@rendermode InteractiveServer
+@inject LocationService Locations
+@inject NavigationManager Nav
+@inject IStringLocalizer<SharedResource> Loc
+
+<PageTitle>@Loc["Admin.Nav.Locations"]</PageTitle>
+
+<PageHeading Title="@Loc["Admin.Nav.Locations"]"
+             Description="Cities are seeded from the district list. Add the terminals and counters your buses actually stop at.">
+    <Actions>
+        <a class="btn" href="/staff/locations/new">Add stop</a>
+    </Actions>
+</PageHeading>
+
+<div class="toolbar">
+    <input class="input" placeholder="Search name or district…" value="@_search"
+           @oninput="e => ApplySearch((string?)e.Value)" />
+    <select class="select" value="@(_type?.ToString() ?? "")" @onchange="OnTypeChange">
+        <option value="">All types</option>
+        <option value="@LocationType.City">Cities</option>
+        <option value="@LocationType.Terminal">Terminals</option>
+        <option value="@LocationType.Counter">Counters</option>
+    </select>
+    <span class="toolbar__spacer"></span>
+    <span class="muted text-sm">@_rows.Count shown</span>
+</div>
+
+@if (_loading)
+{
+    <div class="loading-block">@Loc["Common.Loading"]</div>
+}
+else if (_rows.Count == 0)
+{
+    <div class="table-wrap">
+        <EmptyState Title="Nothing matches" Message="Try a different search or add a new stop." />
+    </div>
+}
+else
+{
+    <div class="table-wrap table-scroll">
+        <table class="data">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Type</th>
+                    <th>District</th>
+                    <th>Division</th>
+                    <th>Status</th>
+                    <th class="actions"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var l in _rows)
+                {
+                    <tr>
+                        <td>
+                            <strong>@l.Name</strong>
+                            @if (l.Parent is not null)
+                            {
+                                <div class="muted text-sm">in @l.Parent.Name</div>
+                            }
+                            else if (!string.IsNullOrEmpty(l.NameBn))
+                            {
+                                <div class="muted text-sm">@l.NameBn</div>
+                            }
+                        </td>
+                        <td>@l.Type</td>
+                        <td>@l.District</td>
+                        <td>@l.Division</td>
+                        <td><StatusPill Active="l.IsActive" /></td>
+                        <td class="actions">
+                            <div class="row-actions">
+                                <button class="icon-btn" title="Edit" @onclick="() => Edit(l.Id)">✎</button>
+                                <button class="icon-btn" title="@(l.IsActive ? "Deactivate" : "Activate")"
+                                        @onclick="() => Toggle(l)">@(l.IsActive ? "⦸" : "⏻")</button>
+                                @if (l.Type != LocationType.City)
+                                {
+                                    <button class="icon-btn icon-btn--danger" title="Delete" @onclick="() => AskDelete(l)">🗑</button>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+<ConfirmDialog Visible="_deleteTarget is not null"
+               Title="Delete this stop?"
+               Message="@($"“{_deleteTarget?.Name}” will be removed. This can't be undone.")"
+               Busy="_deleting"
+               OnConfirmed="ConfirmDelete"
+               OnCancelled="() => _deleteTarget = null" />
+
+@if (_error is not null)
+{
+    <div class="alert alert--error" style="margin-top: var(--space-4);" role="alert">@_error</div>
+}
+
+@code {
+    private List<Location> _rows = [];
+    private string? _search;
+    private LocationType? _type;
+    private bool _loading = true;
+    private Location? _deleteTarget;
+    private bool _deleting;
+    private string? _error;
+    private CancellationTokenSource? _debounce;
+
+    protected override Task OnInitializedAsync() => Reload();
+
+    private async Task Reload()
+    {
+        _loading = true;
+        _rows = await Locations.ListAsync(_search, _type);
+        _loading = false;
+    }
+
+    private async Task ApplySearch(string? value)
+    {
+        _search = value;
+        _debounce?.Cancel();
+        _debounce = new CancellationTokenSource();
+        var token = _debounce.Token;
+        try
+        {
+            await Task.Delay(250, token);
+            await Reload();
+            StateHasChanged();
+        }
+        catch (TaskCanceledException) { }
+    }
+
+    private async Task OnTypeChange(ChangeEventArgs e)
+    {
+        _type = Enum.TryParse<LocationType>((string?)e.Value, out var t) ? t : null;
+        await Reload();
+    }
+
+    private void Edit(Guid id) => Nav.NavigateTo($"/staff/locations/{id}");
+
+    private async Task Toggle(Location l)
+    {
+        await Locations.SetActiveAsync(l.Id, !l.IsActive);
+        await Reload();
+    }
+
+    private void AskDelete(Location l)
+    {
+        _error = null;
+        _deleteTarget = l;
+    }
+
+    private async Task ConfirmDelete()
+    {
+        if (_deleteTarget is null) return;
+        _deleting = true;
+        var result = await Locations.DeleteAsync(_deleteTarget.Id);
+        _deleting = false;
+        _deleteTarget = null;
+        if (!result.Succeeded)
+            _error = result.Error;
+        await Reload();
+    }
+}

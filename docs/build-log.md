@@ -52,3 +52,32 @@ circuit overhead on read-only pages.
 Gotcha fixed: an `@layout AdminLayout` line in `Components/Admin/_Imports.razor` made
 `AdminLayout` its own parent layout → infinite render → thread-pool starvation. Layout
 components now live in `Components/Layout/` where that import doesn't reach them.
+
+## Milestone 2 — Admin core
+
+- **Services** (`Services/Admin/`): `LocationService`, `BusService`, `RouteService`,
+  `StaffService` — list/get/create/update/delete with business validation, FK-guarded
+  deletes, and an audit entry on every mutation. `OperationResult` for expected failures.
+  `SeatMapFactory` seeds a starting seat plan from a preset.
+- **Shared components** (`Components/Admin/Shared/`): `PageHeading`, `EmptyState`,
+  `StatusPill`, `ConfirmDialog`, `LocationPicker` (division-grouped select).
+- **Screens** (all `InteractiveServer`; forms use `RenderModes.ServerNoPrerender` so
+  hydration lag can't eat the first keystrokes):
+  - Buses — list + form with the **visual seat-layout editor** (`SeatLayoutEditor`):
+    preset generate, per-cell add/remove/type, add/remove rows & columns, renumber.
+  - Routes — list + form (origin/destination pickers, distance, duration).
+  - Locations — list/search/filter + form; cities seeded, admin adds terminals/counters.
+  - Staff (super admin) — list + form, role + counter assignment, password reset,
+    activate/deactivate (bumps the security stamp to drop live sessions).
+  - Settings (super admin) — typed edit of the `AppSettings` singleton.
+  - Audit log (super admin) — paged, searchable, action filter.
+- Dashboard now shows fleet/route/location/staff counts and setup shortcuts.
+- `AdminNav` grows per milestone so every link resolves; sections role-gated with
+  `<AuthorizeView Policy=…>`.
+
+Gotcha fixed: scoped `.razor.css` doesn't reach a child component's root element
+(`<NavLink>`), so `AdminNav`'s link styling needs `::deep`. `@rendermode` can't live
+in `_Imports.razor` — needs `@using static …RenderMode` and a per-page directive.
+
+Verified end-to-end with a Playwright script (`scratchpad/drive.mjs`): login → create
+a bus + seat map → routes → staff → settings → audit, 0 console errors, plus mobile.

@@ -1,0 +1,153 @@
+@page "/staff/staff"
+@rendermode InteractiveServer
+@attribute [Authorize(Policy = AuthPolicies.SuperAdmin)]
+@inject StaffService Staff
+@inject NavigationManager Nav
+@inject IStringLocalizer<SharedResource> Loc
+
+<PageTitle>@Loc["Admin.Nav.Staff"]</PageTitle>
+
+<PageHeading Title="@Loc["Admin.Nav.Staff"]"
+             Description="Counter and administrator accounts. Counter staff are tied to a counter and see only its bookings.">
+    <Actions>
+        <a class="btn" href="/staff/staff/new">Add account</a>
+    </Actions>
+</PageHeading>
+
+@if (_loading)
+{
+    <div class="loading-block">@Loc["Common.Loading"]</div>
+}
+else if (_rows.Count == 0)
+{
+    <div class="table-wrap"><EmptyState Title="No staff accounts yet" /></div>
+}
+else
+{
+    <div class="table-wrap table-scroll">
+        <table class="data">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Username</th>
+                    <th>Role</th>
+                    <th>Counter</th>
+                    <th>Last sign-in</th>
+                    <th>Status</th>
+                    <th class="actions"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var s in _rows)
+                {
+                    <tr>
+                        <td><strong>@s.FullName</strong></td>
+                        <td>@s.Username</td>
+                        <td><span class="badge @(s.Role == Roles.SuperAdmin ? "badge--info" : "")">@RoleLabel(s.Role)</span></td>
+                        <td>@(s.CounterName ?? "—")</td>
+                        <td class="muted text-sm">@(s.LastLoginAt is { } t ? t.ToLocalTime().ToString("d MMM, HH:mm") : "never")</td>
+                        <td><StatusPill Active="s.IsActive" /></td>
+                        <td class="actions">
+                            <div class="row-actions">
+                                <button class="icon-btn" title="Edit" @onclick="() => Edit(s.Id)">✎</button>
+                                <button class="icon-btn" title="Reset password" @onclick="() => OpenReset(s)">🔑</button>
+                                <button class="icon-btn" title="@(s.IsActive ? "Deactivate" : "Activate")"
+                                        @onclick="() => Toggle(s)">@(s.IsActive ? "⦸" : "⏻")</button>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@if (_resetTarget is not null)
+{
+    <div class="modal-backdrop" @onclick="() => _resetTarget = null">
+        <div class="modal" @onclick:stopPropagation role="dialog" aria-modal="true">
+            <h3>Reset password</h3>
+            <p>Set a new password for <strong>@_resetTarget.FullName</strong>. They'll be signed out everywhere.</p>
+            <div class="field">
+                <label for="newpw">New password</label>
+                <input id="newpw" class="input" type="text" @bind="_newPassword" @bind:event="oninput" />
+            </div>
+            @if (_resetError is not null)
+            {
+                <div class="alert alert--error" style="margin-top: var(--space-3);">@_resetError</div>
+            }
+            <div class="modal__actions">
+                <button class="btn btn--ghost" @onclick="() => _resetTarget = null">Cancel</button>
+                <button class="btn" @onclick="DoReset" disabled="@_resetting">@(_resetting ? "…" : "Reset")</button>
+            </div>
+        </div>
+    </div>
+}
+
+@if (_flash is not null)
+{
+    <div class="alert alert--success" style="margin-top: var(--space-4);">@_flash</div>
+}
+@if (_error is not null)
+{
+    <div class="alert alert--error" style="margin-top: var(--space-4);">@_error</div>
+}
+
+@code {
+    private List<StaffRow> _rows = [];
+    private bool _loading = true;
+    private string? _error;
+    private string? _flash;
+
+    private StaffRow? _resetTarget;
+    private string _newPassword = "";
+    private bool _resetting;
+    private string? _resetError;
+
+    protected override Task OnInitializedAsync() => Reload();
+
+    private async Task Reload()
+    {
+        _loading = true;
+        _rows = await Staff.ListAsync();
+        _loading = false;
+    }
+
+    private void Edit(Guid id) => Nav.NavigateTo($"/staff/staff/{id}");
+
+    private async Task Toggle(StaffRow s)
+    {
+        _error = _flash = null;
+        var result = await Staff.SetActiveAsync(s.Id, !s.IsActive);
+        if (!result.Succeeded) _error = result.Error;
+        await Reload();
+    }
+
+    private void OpenReset(StaffRow s)
+    {
+        _resetTarget = s;
+        _newPassword = "";
+        _resetError = null;
+    }
+
+    private async Task DoReset()
+    {
+        if (_resetTarget is null) return;
+        _resetting = true;
+        _resetError = null;
+        var result = await Staff.ResetPasswordAsync(_resetTarget.Id, _newPassword);
+        _resetting = false;
+        if (result.Succeeded)
+        {
+            _flash = $"Password reset for {_resetTarget.Username}.";
+            _resetTarget = null;
+        }
+        else
+        {
+            _resetError = result.Error;
+        }
+    }
+
+    private static string RoleLabel(string role) =>
+        role == Roles.SuperAdmin ? "Super admin" : "Counter staff";
+}

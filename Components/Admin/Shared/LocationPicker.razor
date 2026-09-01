@@ -1,0 +1,32 @@
+@* A grouped select over locations. Two-way binds a Guid? via @bind-Value. *@
+
+<select class="select" value="@(Value?.ToString() ?? "")" @onchange="OnChange" disabled="@Disabled">
+    <option value="">@Placeholder</option>
+    @foreach (var group in Options.GroupBy(o => o.Division).OrderBy(g => g.Key))
+    {
+        <optgroup label="@group.Key">
+            @foreach (var loc in group.OrderBy(l => l.District).ThenBy(l => l.Name))
+            {
+                <option value="@loc.Id">@Label(loc)</option>
+            }
+        </optgroup>
+    }
+</select>
+
+@code {
+    [Parameter] public IReadOnlyList<Location> Options { get; set; } = [];
+    [Parameter] public Guid? Value { get; set; }
+    [Parameter] public EventCallback<Guid?> ValueChanged { get; set; }
+    [Parameter] public string Placeholder { get; set; } = "— choose —";
+    [Parameter] public bool Disabled { get; set; }
+
+    private static string Label(Location loc) =>
+        loc.Type == LocationType.City ? loc.Name : $"{loc.Name} ({loc.District})";
+
+    private async Task OnChange(ChangeEventArgs e)
+    {
+        var raw = e.Value?.ToString();
+        Value = Guid.TryParse(raw, out var id) ? id : null;
+        await ValueChanged.InvokeAsync(Value);
+    }
+}

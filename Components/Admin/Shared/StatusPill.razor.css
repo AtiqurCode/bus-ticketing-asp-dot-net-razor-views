@@ -1,0 +1,8 @@
+.status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--ink-400);
+}
+
+.status-dot.is-on { background: var(--green-500); }

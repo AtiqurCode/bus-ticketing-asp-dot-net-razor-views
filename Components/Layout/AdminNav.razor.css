@@ -11,40 +11,46 @@
 }
 
 .anav__heading {
-    padding: var(--space-2) var(--space-3);
-    font-size: var(--text-xs);
+    padding: var(--space-2) var(--space-3) var(--space-1);
+    font-size: 0.68rem;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: #6f9488;
+    letter-spacing: 0.08em;
+    color: #8fb3a8;
 }
 
-.anav__link {
+/* NavLink renders its own <a>, which doesn't inherit this component's scope
+   attribute — reach it with ::deep. */
+.anav__group ::deep .anav__link {
     display: flex;
     align-items: center;
     gap: var(--space-3);
-    padding: var(--space-3);
+    padding: 0.6rem var(--space-3);
     border-radius: var(--radius);
-    color: #cfe3db;
+    color: #eaf4f0;
     font-size: var(--text-sm);
     font-weight: 500;
 }
 
-.anav__link:hover {
+.anav__group ::deep .anav__link:hover {
     text-decoration: none;
-    background: rgba(255, 255, 255, 0.06);
+    background: rgba(255, 255, 255, 0.08);
     color: #fff;
 }
 
-.anav__link.active {
+.anav__group ::deep .anav__link.active {
     background: var(--green-600);
     color: #fff;
+    font-weight: 600;
 }
 
-.anav__icon {
+.anav__group ::deep .anav__icon {
     display: grid;
     place-items: center;
-    width: 20px;
-    font-size: 13px;
-    opacity: 0.9;
+    width: 18px;
+    font-size: 14px;
+    color: #a9cabf;
 }
+
+.anav__group ::deep .anav__link:hover .anav__icon,
+.anav__group ::deep .anav__link.active .anav__icon { color: #fff; }
