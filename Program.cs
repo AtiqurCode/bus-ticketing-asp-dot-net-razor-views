@@ -6,6 +6,7 @@ using BusTicketing.Domain;
 using BusTicketing.Services;
 using BusTicketing.Services.Admin;
 using BusTicketing.Services.Auth;
+using BusTicketing.Services.Bookings;
 using BusTicketing.Services.Localization;
 using BusTicketing.Services.Scheduling;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -98,6 +99,13 @@ builder.Services.AddScoped<ScheduleTemplateService>();
 builder.Services.AddScoped<TripService>();
 builder.Services.AddScoped<TripGenerationService>();
 builder.Services.AddHostedService<TripGenerationBackgroundService>();
+
+builder.Services.AddSingleton<SeatMapBroadcaster>();
+builder.Services.AddScoped<TripSearchService>();
+builder.Services.AddScoped<SeatHoldService>();
+builder.Services.AddScoped<BookingService>();
+builder.Services.AddScoped<PaymentReviewService>();
+builder.Services.AddHostedService<BookingMaintenanceBackgroundService>();
 
 // --- Blazor --------------------------------------------------
 builder.Services.AddRazorComponents()

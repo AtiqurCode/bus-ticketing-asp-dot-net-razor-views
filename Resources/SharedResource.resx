@@ -128,4 +128,86 @@
   <data name="NotFound.Title" xml:space="preserve"><value>Page not found</value></data>
   <data name="NotFound.Body" xml:space="preserve"><value>The page you're after doesn't exist or has moved.</value></data>
   <data name="NotFound.Home" xml:space="preserve"><value>Back to home</value></data>
+
+  <data name="Common.Optional" xml:space="preserve"><value>optional</value></data>
+
+  <data name="Search.Prompt.Title" xml:space="preserve"><value>Where are you headed?</value></data>
+  <data name="Search.Prompt.Body" xml:space="preserve"><value>Enter your origin, destination and travel date above to see available buses.</value></data>
+  <data name="Search.NoResults.Title" xml:space="preserve"><value>No buses on this route yet</value></data>
+  <data name="Search.NoResults.Body" xml:space="preserve"><value>Try a nearby date, or check back soon — schedules are added regularly.</value></data>
+  <data name="Search.ResultCount" xml:space="preserve"><value>{0} bus(es) found</value></data>
+  <data name="Search.Boarding" xml:space="preserve"><value>Boarding</value></data>
+  <data name="Search.SeatsLeft" xml:space="preserve"><value>{0} seats left</value></data>
+  <data name="Search.SoldOut" xml:space="preserve"><value>Sold out</value></data>
+  <data name="Search.SelectSeats" xml:space="preserve"><value>Select seats</value></data>
+
+  <data name="Seat.Front" xml:space="preserve"><value>Front</value></data>
+  <data name="Seat.Seat" xml:space="preserve"><value>Seat</value></data>
+  <data name="Seat.LowerDeck" xml:space="preserve"><value>Lower deck</value></data>
+  <data name="Seat.UpperDeck" xml:space="preserve"><value>Upper deck</value></data>
+  <data name="Seat.Legend.Available" xml:space="preserve"><value>Available</value></data>
+  <data name="Seat.Legend.Selected" xml:space="preserve"><value>Your seat</value></data>
+  <data name="Seat.Legend.Taken" xml:space="preserve"><value>Being booked</value></data>
+  <data name="Seat.Legend.Booked" xml:space="preserve"><value>Sold</value></data>
+
+  <data name="Book.Title" xml:space="preserve"><value>Book your seats</value></data>
+  <data name="Book.PickSeats" xml:space="preserve"><value>Choose your seats</value></data>
+  <data name="Book.YourDetails" xml:space="preserve"><value>Passenger &amp; payment</value></data>
+  <data name="Book.Summary" xml:space="preserve"><value>Your booking</value></data>
+  <data name="Book.NoSeatsYet" xml:space="preserve"><value>Tap a seat on the map to select it.</value></data>
+  <data name="Book.Seats" xml:space="preserve"><value>Seats</value></data>
+  <data name="Book.Total" xml:space="preserve"><value>Total</value></data>
+  <data name="Book.Continue" xml:space="preserve"><value>Continue</value></data>
+  <data name="Book.HoldTimer" xml:space="preserve"><value>Seats held for</value></data>
+  <data name="Book.HoldExpired" xml:space="preserve"><value>Your seat hold expired — please choose again.</value></data>
+  <data name="Book.PassengerName" xml:space="preserve"><value>Full name</value></data>
+  <data name="Book.Phone" xml:space="preserve"><value>Mobile number</value></data>
+  <data name="Book.Email" xml:space="preserve"><value>Email</value></data>
+  <data name="Book.Dropping" xml:space="preserve"><value>Dropping</value></data>
+  <data name="Book.HowToPay" xml:space="preserve"><value>How would you like to pay?</value></data>
+  <data name="Book.PayOnline" xml:space="preserve"><value>Pay now (mobile financial service)</value></data>
+  <data name="Book.PayOnline.Hint" xml:space="preserve"><value>Send the fare from your wallet and enter the transaction ID for verification.</value></data>
+  <data name="Book.PayCounter" xml:space="preserve"><value>Pay at the counter</value></data>
+  <data name="Book.PayCounter.Hint" xml:space="preserve"><value>We'll hold your seats. Pay at any counter before the hold expires.</value></data>
+  <data name="Book.Mfs.Intro" xml:space="preserve"><value>Send ৳{0} to our merchant number, then fill in the details from your confirmation SMS.</value></data>
+  <data name="Book.Mfs.Provider" xml:space="preserve"><value>Wallet</value></data>
+  <data name="Book.Mfs.Other" xml:space="preserve"><value>Other</value></data>
+  <data name="Book.Mfs.SenderNumber" xml:space="preserve"><value>Number you paid from</value></data>
+  <data name="Book.Mfs.TransactionId" xml:space="preserve"><value>Transaction ID</value></data>
+  <data name="Book.Mfs.PickProvider" xml:space="preserve"><value>Choose which wallet you paid from.</value></data>
+  <data name="Book.ConfirmBooking" xml:space="preserve"><value>Confirm booking</value></data>
+  <data name="Book.Unavailable.Title" xml:space="preserve"><value>This trip can't be booked</value></data>
+  <data name="Book.Unavailable.Body" xml:space="preserve"><value>It may have departed or been cancelled. Search again for another bus.</value></data>
+
+  <data name="Confirm.Title" xml:space="preserve"><value>Booking</value></data>
+  <data name="Confirm.Reference" xml:space="preserve"><value>Reference</value></data>
+  <data name="Confirm.ShowAtBoarding" xml:space="preserve"><value>Show this at boarding</value></data>
+  <data name="Confirm.Departure" xml:space="preserve"><value>Departure</value></data>
+  <data name="Confirm.Arrival" xml:space="preserve"><value>Arrival</value></data>
+  <data name="Confirm.Bus" xml:space="preserve"><value>Bus</value></data>
+  <data name="Confirm.PaymentMethod" xml:space="preserve"><value>Payment method</value></data>
+  <data name="Confirm.PaymentStatus" xml:space="preserve"><value>Payment status</value></data>
+  <data name="Confirm.HeldUntil" xml:space="preserve"><value>Held until</value></data>
+  <data name="Confirm.ViewMyTickets" xml:space="preserve"><value>View my tickets</value></data>
+  <data name="Confirm.Pay.Pending" xml:space="preserve"><value>Awaiting verification</value></data>
+  <data name="Confirm.Pay.Verified" xml:space="preserve"><value>Paid</value></data>
+  <data name="Confirm.Pay.Rejected" xml:space="preserve"><value>Not verified</value></data>
+  <data name="Confirm.Pay.Refunded" xml:space="preserve"><value>Refunded</value></data>
+  <data name="Confirm.NotFound.Title" xml:space="preserve"><value>Booking not found</value></data>
+  <data name="Confirm.NotFound.Body" xml:space="preserve"><value>Check the reference, or look it up with your phone number.</value></data>
+  <data name="Confirm.Banner.Confirmed.Title" xml:space="preserve"><value>You're all set</value></data>
+  <data name="Confirm.Banner.Confirmed.Body" xml:space="preserve"><value>Your seats are confirmed. Show the reference above when you board.</value></data>
+  <data name="Confirm.Banner.Pending.Title" xml:space="preserve"><value>Almost there</value></data>
+  <data name="Confirm.Banner.PendingOnline.Body" xml:space="preserve"><value>We've received your transaction ID. A staff member will verify it shortly and your booking will be confirmed.</value></data>
+  <data name="Confirm.Banner.PendingCounter.Body" xml:space="preserve"><value>Your seats are reserved. Pay at any counter before the hold expires to confirm them.</value></data>
+  <data name="Confirm.Banner.Rejected.Title" xml:space="preserve"><value>Payment couldn't be verified</value></data>
+  <data name="Confirm.Banner.Rejected.Body" xml:space="preserve"><value>Please re-check and resubmit your transaction details below before the hold expires.</value></data>
+  <data name="Confirm.Banner.Cancelled.Title" xml:space="preserve"><value>Booking cancelled</value></data>
+  <data name="Confirm.Banner.Cancelled.Body" xml:space="preserve"><value>This booking has been cancelled.</value></data>
+  <data name="Confirm.Banner.Expired.Title" xml:space="preserve"><value>Reservation expired</value></data>
+  <data name="Confirm.Banner.Expired.Body" xml:space="preserve"><value>The seats were released because payment wasn't settled in time. Please book again.</value></data>
+  <data name="Confirm.Resubmit.Title" xml:space="preserve"><value>Resubmit your payment</value></data>
+  <data name="Confirm.Resubmit.Reason" xml:space="preserve"><value>Reason</value></data>
+  <data name="Confirm.Resubmit.Submit" xml:space="preserve"><value>Resubmit</value></data>
+  <data name="Confirm.Resubmit.Done" xml:space="preserve"><value>Thanks — we'll verify the new details.</value></data>
 </root>

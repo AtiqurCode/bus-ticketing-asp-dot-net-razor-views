@@ -1,0 +1,372 @@
+@page "/book/{TripId:guid}"
+@rendermode RenderModes.ServerNoPrerender
+@using System.ComponentModel.DataAnnotations
+@using BusTicketing.Services.Bookings
+@implements IAsyncDisposable
+@inject SeatHoldService Holds
+@inject BookingService Bookings
+@inject SeatMapBroadcaster Broadcaster
+@inject IAppClock Clock
+@inject NavigationManager Nav
+@inject IStringLocalizer<SharedResource> Loc
+
+<PageTitle>@Loc["Book.Title"]</PageTitle>
+
+<div class="container page">
+    @if (_context is null)
+    {
+        <div class="loading-block">@Loc["Common.Loading"]</div>
+    }
+    else if (_context.Status != TripStatus.Scheduled || _context.DepartureTime <= Clock.UtcNow)
+    {
+        <div class="centered" style="min-height: 40vh;">
+            <div class="centered__inner">
+                <h2>@Loc["Book.Unavailable.Title"]</h2>
+                <p class="muted">@Loc["Book.Unavailable.Body"]</p>
+                <a class="btn" href="/search">@Loc["Nav.Search"]</a>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="book">
+            <div class="book__main">
+                <div class="triphead card">
+                    <div class="card__body">
+                        <div class="triphead__route">@_context.OriginName <span aria-hidden="true">→</span> @_context.DestinationName</div>
+                        <div class="triphead__meta muted">
+                            @Clock.ToLocal(_context.DepartureTime).ToString("dddd, d MMM · HH:mm")
+                            → @Clock.ToLocal(_context.ArrivalTime).ToString("HH:mm")
+                            · @_context.Operator · <span class="badge">@_context.ClassLabel</span>
+                        </div>
+                    </div>
+                </div>
+
+                @if (_step == Step.Seats)
+                {
+                    <h1>@Loc["Book.PickSeats"]</h1>
+                    @if (_seatError is not null)
+                    {
+                        <div class="alert alert--error" role="alert">@_seatError</div>
+                    }
+                    <SeatChart Seats="_context.Seats"
+                             Rows="_context.Rows" Columns="_context.Columns" Decks="_context.Decks"
+                             OnSeatClicked="ToggleSeat" Disabled="_busy" />
+                }
+                else if (_step == Step.Details)
+                {
+                    <h1>@Loc["Book.YourDetails"]</h1>
+                    <EditForm Model="_form" OnValidSubmit="Confirm" class="book__form">
+                        <DataAnnotationsValidator />
+
+                        <div class="form-grid">
+                            <div class="field">
+                                <label for="name">@Loc["Book.PassengerName"]</label>
+                                <InputText id="name" class="input" @bind-Value="_form.Name" autocomplete="name" />
+                                <ValidationMessage For="() => _form.Name" />
+                            </div>
+                            <div class="field">
+                                <label for="phone">@Loc["Book.Phone"]</label>
+                                <InputText id="phone" class="input" @bind-Value="_form.Phone" inputmode="tel"
+                                           placeholder="01XXXXXXXXX" autocomplete="tel" />
+                                <ValidationMessage For="() => _form.Phone" />
+                            </div>
+                            <div class="field col-span-2">
+                                <label for="email">@Loc["Book.Email"] <span class="muted">(@Loc["Common.Optional"])</span></label>
+                                <InputText id="email" class="input" @bind-Value="_form.Email" inputmode="email" autocomplete="email" />
+                            </div>
+                        </div>
+
+                        <fieldset class="paychoice">
+                            <legend>@Loc["Book.HowToPay"]</legend>
+                            <label class="paychoice__opt @(_form.PayOnline ? "is-active" : "")">
+                                <input type="radio" name="pay" checked="@_form.PayOnline" @onchange="() => _form.PayOnline = true" />
+                                <div>
+                                    <strong>@Loc["Book.PayOnline"]</strong>
+                                    <span class="muted text-sm">@Loc["Book.PayOnline.Hint"]</span>
+                                </div>
+                            </label>
+                            <label class="paychoice__opt @(!_form.PayOnline ? "is-active" : "")">
+                                <input type="radio" name="pay" checked="@(!_form.PayOnline)" @onchange="() => _form.PayOnline = false" />
+                                <div>
+                                    <strong>@Loc["Book.PayCounter"]</strong>
+                                    <span class="muted text-sm">@Loc["Book.PayCounter.Hint"]</span>
+                                </div>
+                            </label>
+                        </fieldset>
+
+                        @if (_form.PayOnline)
+                        {
+                            <div class="mfs card">
+                                <div class="card__body stack">
+                                    <p class="text-sm muted">@Loc["Book.Mfs.Intro"]</p>
+                                    <div class="form-grid">
+                                        <div class="field">
+                                            <label for="provider">@Loc["Book.Mfs.Provider"]</label>
+                                            <select id="provider" class="select" @bind="_form.Provider">
+                                                <option value="">—</option>
+                                                <option value="@MfsProvider.Bkash">bKash</option>
+                                                <option value="@MfsProvider.Nagad">Nagad</option>
+                                                <option value="@MfsProvider.Rocket">Rocket</option>
+                                                <option value="@MfsProvider.Upay">Upay</option>
+                                                <option value="@MfsProvider.Other">@Loc["Book.Mfs.Other"]</option>
+                                            </select>
+                                        </div>
+                                        <div class="field">
+                                            <label for="sender">@Loc["Book.Mfs.SenderNumber"]</label>
+                                            <InputText id="sender" class="input" @bind-Value="_form.SenderMsisdn" inputmode="tel" />
+                                        </div>
+                                        <div class="field col-span-2">
+                                            <label for="txn">@Loc["Book.Mfs.TransactionId"]</label>
+                                            <InputText id="txn" class="input" @bind-Value="_form.TransactionId" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+
+                        @if (_confirmError is not null)
+                        {
+                            <div class="alert alert--error" role="alert">@_confirmError</div>
+                        }
+
+                        <div class="form-actions">
+                            <button type="button" class="btn btn--ghost" @onclick="BackToSeats" disabled="@_busy">@Loc["Common.Back"]</button>
+                            <button type="submit" class="btn" disabled="@_busy">
+                                @(_busy ? Loc["Common.Loading"] : Loc["Book.ConfirmBooking"])
+                            </button>
+                        </div>
+                    </EditForm>
+                }
+            </div>
+
+            <aside class="book__side">
+                <div class="summary card">
+                    <div class="card__body">
+                        <h3>@Loc["Book.Summary"]</h3>
+
+                        @if (_holdRemaining is { } remaining && _step == Step.Seats)
+                        {
+                            <div class="holdclock @(remaining.TotalSeconds < 60 ? "is-low" : "")">
+                                @Loc["Book.HoldTimer"] <strong>@remaining.ToString(@"m\:ss")</strong>
+                            </div>
+                        }
+
+                        @if (_selected.Count == 0)
+                        {
+                            <p class="muted text-sm">@Loc["Book.NoSeatsYet"]</p>
+                        }
+                        else
+                        {
+                            <div class="summary__row">
+                                <span>@Loc["Book.Seats"]</span>
+                                <span class="summary__seats">@string.Join(", ", _selected)</span>
+                            </div>
+                            <div class="summary__row">
+                                <span>৳@_context.Fare.ToString("0") × @_selected.Count</span>
+                                <span>৳@((_context.Fare * _selected.Count).ToString("0"))</span>
+                            </div>
+                            <div class="summary__total">
+                                <span>@Loc["Book.Total"]</span>
+                                <span>৳@((_context.Fare * _selected.Count).ToString("0"))</span>
+                            </div>
+                        }
+
+                        @if (_step == Step.Seats)
+                        {
+                            <button class="btn btn--block" disabled="@(_selected.Count == 0 || _busy)" @onclick="GoToDetails">
+                                @Loc["Book.Continue"]
+                            </button>
+                        }
+                    </div>
+                </div>
+
+                @if (_context.BoardingPoint is not null || _context.DroppingPoint is not null)
+                {
+                    <div class="card"><div class="card__body stack text-sm">
+                        @if (_context.BoardingPoint is not null)
+                        {
+                            <div><span class="muted">@Loc["Search.Boarding"]:</span> @_context.BoardingPoint</div>
+                        }
+                        @if (_context.DroppingPoint is not null)
+                        {
+                            <div><span class="muted">@Loc["Book.Dropping"]:</span> @_context.DroppingPoint</div>
+                        }
+                    </div></div>
+                }
+            </aside>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public Guid TripId { get; set; }
+
+    private enum Step { Seats, Details }
+
+    private TripBookingContext? _context;
+    private Step _step = Step.Seats;
+    private readonly Guid _holdToken = Guid.NewGuid();
+    private List<string> _selected = [];
+    private bool _busy;
+    private string? _seatError;
+    private string? _confirmError;
+    private IDisposable? _subscription;
+    private CancellationTokenSource? _ticker;
+    private TimeSpan? _holdRemaining;
+    private readonly DetailsForm _form = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Reload();
+        _subscription = Broadcaster.Subscribe(TripId, OnExternalChange);
+        _ticker = new CancellationTokenSource();
+        _ = RunTickerAsync(_ticker.Token);
+    }
+
+    private async Task Reload()
+    {
+        _context = await Holds.GetContextAsync(TripId, _holdToken);
+        _selected = _context?.MySeatNumbers.ToList() ?? [];
+        UpdateRemaining();
+    }
+
+    private async Task OnExternalChange()
+    {
+        await Reload();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task ToggleSeat(string seatNumber)
+    {
+        if (_busy) return;
+        _busy = true;
+        _seatError = null;
+
+        var result = await Holds.ToggleAsync(TripId, seatNumber, _holdToken);
+        _selected = result.MySeats.ToList();
+        if (!result.Succeeded)
+            _seatError = result.Error;
+
+        await Reload();
+        _busy = false;
+    }
+
+    private async Task GoToDetails()
+    {
+        if (_selected.Count == 0) return;
+        await Holds.ExtendAsync(TripId, _holdToken);
+        _form.Phone ??= "";
+        _step = Step.Details;
+        await Reload();
+    }
+
+    private async Task BackToSeats()
+    {
+        _step = Step.Seats;
+        await Reload();
+    }
+
+    private async Task Confirm()
+    {
+        _confirmError = null;
+        _busy = true;
+
+        var request = new BookingRequest
+        {
+            TripId = TripId,
+            HoldToken = _holdToken,
+            SeatNumbers = _selected,
+            PassengerName = _form.Name,
+            PassengerPhone = _form.Phone ?? "",
+            PassengerEmail = _form.Email,
+            PaymentMode = _form.PayOnline ? PaymentMode.Online : PaymentMode.Counter,
+            Provider = _form.PayOnline && Enum.TryParse<MfsProvider>(_form.Provider, out var p) ? p : null,
+            TransactionId = _form.PayOnline ? _form.TransactionId : null,
+            SenderMsisdn = _form.PayOnline ? _form.SenderMsisdn : null
+        };
+
+        var result = await Bookings.CreateAsync(request);
+        _busy = false;
+
+        if (result.Succeeded)
+        {
+            _subscription?.Dispose();
+            _subscription = null;
+            Nav.NavigateTo($"/booking/{result.Value}");
+        }
+        else
+        {
+            _confirmError = result.Error;
+            await Reload();
+            if (_context is not null && _selected.Count == 0)
+                _step = Step.Seats;
+        }
+    }
+
+    private async Task RunTickerAsync(CancellationToken ct)
+    {
+        try
+        {
+            using var timer = new PeriodicTimer(TimeSpan.FromSeconds(1));
+            while (await timer.WaitForNextTickAsync(ct))
+            {
+                var before = _holdRemaining;
+                UpdateRemaining();
+                if (_holdRemaining is { Ticks: <= 0 } && before is { Ticks: > 0 })
+                {
+                    await Holds.ReleaseAllAsync(TripId, _holdToken);
+                    await Reload();
+                    if (_step == Step.Details) _step = Step.Seats;
+                    _seatError = Loc["Book.HoldExpired"];
+                }
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (OperationCanceledException) { }
+    }
+
+    private void UpdateRemaining()
+    {
+        if (_context?.MyHoldExpiresAt is { } expiry)
+        {
+            var left = expiry - Clock.UtcNow;
+            _holdRemaining = left > TimeSpan.Zero ? left : TimeSpan.Zero;
+        }
+        else
+        {
+            _holdRemaining = null;
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        _ticker?.Cancel();
+        _subscription?.Dispose();
+        try
+        {
+            await Holds.ReleaseAllAsync(TripId, _holdToken);
+        }
+        catch { /* circuit tearing down */ }
+        _ticker?.Dispose();
+    }
+
+    private sealed class DetailsForm
+    {
+        [Required(ErrorMessage = "Enter the passenger's name.")]
+        [MinLength(2, ErrorMessage = "Enter the passenger's name.")]
+        public string Name { get; set; } = "";
+
+        [Required(ErrorMessage = "Enter a mobile number.")]
+        [RegularExpression(@"^(?:\+?880|0)?1\d{9}$", ErrorMessage = "Use a Bangladeshi mobile number, e.g. 01712345678.")]
+        public string? Phone { get; set; } = "";
+
+        [EmailAddress(ErrorMessage = "That email address doesn't look right.")]
+        public string? Email { get; set; }
+
+        public bool PayOnline { get; set; } = true;
+        public string? Provider { get; set; }
+        public string? TransactionId { get; set; }
+        public string? SenderMsisdn { get; set; }
+    }
+}

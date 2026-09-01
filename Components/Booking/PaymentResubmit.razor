@@ -1,0 +1,83 @@
+@rendermode InteractiveServer
+@inject BookingService Bookings
+@inject NavigationManager Nav
+@inject IStringLocalizer<SharedResource> Loc
+
+<div class="card" style="border-color: #f0c4c0;">
+    <div class="card__body stack">
+        <h3>@Loc["Confirm.Resubmit.Title"]</h3>
+        @if (Note is not null)
+        {
+            <div class="alert alert--error">@Loc["Confirm.Resubmit.Reason"]: @Note</div>
+        }
+        @if (_done)
+        {
+            <div class="alert alert--success">@Loc["Confirm.Resubmit.Done"]</div>
+        }
+        else
+        {
+            <div class="form-grid">
+                <div class="field">
+                    <label for="rprovider">@Loc["Book.Mfs.Provider"]</label>
+                    <select id="rprovider" class="select" @bind="_provider">
+                        <option value="">—</option>
+                        <option value="@MfsProvider.Bkash">bKash</option>
+                        <option value="@MfsProvider.Nagad">Nagad</option>
+                        <option value="@MfsProvider.Rocket">Rocket</option>
+                        <option value="@MfsProvider.Upay">Upay</option>
+                        <option value="@MfsProvider.Other">@Loc["Book.Mfs.Other"]</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label for="rsender">@Loc["Book.Mfs.SenderNumber"]</label>
+                    <input id="rsender" class="input" @bind="_sender" inputmode="tel" />
+                </div>
+                <div class="field col-span-2">
+                    <label for="rtxn">@Loc["Book.Mfs.TransactionId"]</label>
+                    <input id="rtxn" class="input" @bind="_txn" />
+                </div>
+            </div>
+            @if (_error is not null)
+            {
+                <div class="alert alert--error">@_error</div>
+            }
+            <button class="btn" @onclick="Submit" disabled="@_busy">
+                @(_busy ? Loc["Common.Loading"] : Loc["Confirm.Resubmit.Submit"])
+            </button>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Reference { get; set; } = "";
+    [Parameter] public string? Note { get; set; }
+
+    private string? _provider;
+    private string? _sender;
+    private string? _txn;
+    private bool _busy;
+    private bool _done;
+    private string? _error;
+
+    private async Task Submit()
+    {
+        _error = null;
+        if (!Enum.TryParse<MfsProvider>(_provider, out var provider))
+        {
+            _error = Loc["Book.Mfs.PickProvider"];
+            return;
+        }
+        _busy = true;
+        var result = await Bookings.ResubmitPaymentAsync(Reference, provider, _txn ?? "", _sender);
+        _busy = false;
+        if (result.Succeeded)
+        {
+            _done = true;
+            Nav.NavigateTo($"/booking/{Reference}", forceLoad: true);
+        }
+        else
+        {
+            _error = result.Error;
+        }
+    }
+}

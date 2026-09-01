@@ -1,0 +1,158 @@
+@page "/booking/{Reference}"
+@using BusTicketing.Services.Bookings
+@inject BookingService Bookings
+@inject SettingsService Settings
+@inject IAppClock Clock
+@inject IStringLocalizer<SharedResource> Loc
+
+<PageTitle>@(_booking is null ? Loc["Confirm.NotFound.Title"] : $"{Loc["Confirm.Title"]} · {_booking.Reference}")</PageTitle>
+
+<div class="container page">
+    @if (_booking is null)
+    {
+        <div class="centered" style="min-height: 40vh;">
+            <div class="centered__inner">
+                <h2>@Loc["Confirm.NotFound.Title"]</h2>
+                <p class="muted">@Loc["Confirm.NotFound.Body"]</p>
+                <a class="btn" href="/my-tickets">@Loc["Nav.MyTickets"]</a>
+            </div>
+        </div>
+    }
+    else
+    {
+        var b = _booking;
+        var trip = b.Trip;
+
+        <div class="ticketwrap">
+            <div class="statusbanner statusbanner--@BannerKind()">
+                <div class="statusbanner__icon" aria-hidden="true">@BannerIcon()</div>
+                <div>
+                    <strong>@BannerTitle()</strong>
+                    <p>@BannerBody()</p>
+                </div>
+            </div>
+
+            <div class="ticket card">
+                <div class="ticket__stub">
+                    <span class="ticket__ref-label">@Loc["Confirm.Reference"]</span>
+                    <span class="ticket__ref">@b.Reference</span>
+                    <span class="ticket__qr-note muted text-sm">@Loc["Confirm.ShowAtBoarding"]</span>
+                </div>
+                <div class="ticket__body">
+                    <div class="ticket__route">
+                        @trip.Route.OriginLocation.Name <span aria-hidden="true">→</span> @trip.Route.DestinationLocation.Name
+                    </div>
+                    <div class="ticket__grid">
+                        <div><span class="muted">@Loc["Confirm.Departure"]</span><br />@Clock.ToLocal(trip.DepartureTime).ToString("ddd d MMM, HH:mm")</div>
+                        <div><span class="muted">@Loc["Confirm.Arrival"]</span><br />@Clock.ToLocal(trip.ArrivalTime).ToString("ddd d MMM, HH:mm")</div>
+                        <div><span class="muted">@Loc["Confirm.Bus"]</span><br />@trip.Bus.Operator · @trip.Bus.ClassLabel</div>
+                        <div><span class="muted">@Loc["Book.Seats"]</span><br /><strong>@string.Join(", ", b.Seats.Select(s => s.SeatNumber))</strong></div>
+                        <div><span class="muted">@Loc["Book.PassengerName"]</span><br />@b.PassengerName</div>
+                        <div><span class="muted">@Loc["Book.Phone"]</span><br />@b.PassengerPhone</div>
+                        @if (b.BoardingCounter is not null)
+                        {
+                            <div><span class="muted">@Loc["Search.Boarding"]</span><br />@b.BoardingCounter.Name</div>
+                        }
+                        <div><span class="muted">@Loc["Book.Total"]</span><br /><strong>৳@b.TotalAmount.ToString("0")</strong></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="paystate card">
+                <div class="card__body">
+                    <div class="paystate__row">
+                        <span class="muted">@Loc["Confirm.PaymentMethod"]</span>
+                        <span>@PaymentMethodLabel()</span>
+                    </div>
+                    <div class="paystate__row">
+                        <span class="muted">@Loc["Confirm.PaymentStatus"]</span>
+                        <span class="badge @PayBadge()">@PayStatusLabel()</span>
+                    </div>
+                    @if (b.Payment?.TransactionId is { } txn)
+                    {
+                        <div class="paystate__row">
+                            <span class="muted">@Loc["Book.Mfs.TransactionId"]</span>
+                            <span>@txn</span>
+                        </div>
+                    }
+                    @if (b.HoldExpiresAt is { } exp && b.Status == BookingStatus.Reserved)
+                    {
+                        <div class="paystate__row">
+                            <span class="muted">@Loc["Confirm.HeldUntil"]</span>
+                            <span>@Clock.ToLocal(exp).ToString("ddd d MMM, HH:mm")</span>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            @if (b.PaymentStatus == PaymentStatus.Rejected && b.Status == BookingStatus.Reserved)
+            {
+                <PaymentResubmit Reference="@b.Reference" Note="@b.Payment?.ReviewNote" />
+            }
+
+            <div class="confirm-actions">
+                <a class="btn btn--ghost" href="/my-tickets?phone=@Uri.EscapeDataString(b.PassengerPhone)">@Loc["Confirm.ViewMyTickets"]</a>
+                <a class="btn btn--ghost" href="/">@Loc["NotFound.Home"]</a>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public string Reference { get; set; } = "";
+
+    private Booking? _booking;
+
+    protected override async Task OnParametersSetAsync() =>
+        _booking = await Bookings.GetByReferenceAsync(Reference);
+
+    private string BannerKind() => _booking!.Status switch
+    {
+        BookingStatus.Confirmed => "ok",
+        BookingStatus.Cancelled or BookingStatus.Expired => "bad",
+        _ => _booking.PaymentStatus == PaymentStatus.Rejected ? "bad" : "wait"
+    };
+
+    private string BannerIcon() => BannerKind() switch { "ok" => "✓", "bad" => "!", _ => "…" };
+
+    private string BannerTitle() => _booking!.Status switch
+    {
+        BookingStatus.Confirmed => Loc["Confirm.Banner.Confirmed.Title"],
+        BookingStatus.Cancelled => Loc["Confirm.Banner.Cancelled.Title"],
+        BookingStatus.Expired => Loc["Confirm.Banner.Expired.Title"],
+        _ => _booking.PaymentStatus == PaymentStatus.Rejected
+            ? Loc["Confirm.Banner.Rejected.Title"]
+            : Loc["Confirm.Banner.Pending.Title"]
+    };
+
+    private string BannerBody() => _booking!.Status switch
+    {
+        BookingStatus.Confirmed => Loc["Confirm.Banner.Confirmed.Body"],
+        BookingStatus.Cancelled => _booking.CancellationReason ?? Loc["Confirm.Banner.Cancelled.Body"],
+        BookingStatus.Expired => Loc["Confirm.Banner.Expired.Body"],
+        _ when _booking.PaymentStatus == PaymentStatus.Rejected => Loc["Confirm.Banner.Rejected.Body"],
+        _ when _booking.PaymentMode == PaymentMode.Online => Loc["Confirm.Banner.PendingOnline.Body"],
+        _ => Loc["Confirm.Banner.PendingCounter.Body"]
+    };
+
+    private string PaymentMethodLabel() => _booking!.PaymentMode switch
+    {
+        PaymentMode.Online => $"{Loc["Book.PayOnline"]} · {_booking.Payment?.Provider}",
+        _ => Loc["Book.PayCounter"]
+    };
+
+    private string PayStatusLabel() => _booking!.PaymentStatus switch
+    {
+        PaymentStatus.Verified => Loc["Confirm.Pay.Verified"],
+        PaymentStatus.Rejected => Loc["Confirm.Pay.Rejected"],
+        PaymentStatus.Refunded => Loc["Confirm.Pay.Refunded"],
+        _ => Loc["Confirm.Pay.Pending"]
+    };
+
+    private string PayBadge() => _booking!.PaymentStatus switch
+    {
+        PaymentStatus.Verified => "badge--success",
+        PaymentStatus.Rejected => "badge--danger",
+        _ => "badge--warning"
+    };
+}

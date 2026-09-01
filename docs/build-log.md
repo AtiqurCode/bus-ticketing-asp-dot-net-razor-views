@@ -113,3 +113,39 @@ platform-zone wall clock to a UTC instant; all trip times go through it.
 
 Verified with `scratchpad/drive-m3.mjs`: schedule create → 54 trips generated
 (9/day × 6 days, Friday excluded), one-off trip, trip cancel. 0 errors.
+
+## Milestone 4a — Public booking flow
+
+- **`TripSearchService`** — resolves a free-text place to matching location ids
+  (a city also matches its terminals), finds Scheduled future trips on the date
+  with an available-seat count.
+- **`SeatMapBroadcaster`** (singleton) — in-process pub/sub keyed by trip. Every
+  open seat map subscribes; hold / release / book fires `Notify(tripId)` and the
+  other circuits re-fetch. Live seat locking with no SignalR hub.
+- **`SeatHoldService`** — `GetContextAsync` (sweeps expired holds, returns the
+  seat views + trip info + this session's hold expiry), `ToggleAsync` (hold /
+  release one seat, 6-seat cap, optimistic-concurrency guarded), `ExtendAsync`,
+  `ReleaseAllAsync`, `SweepExpiredAsync`.
+- **`BookingService`** — `CreateAsync` re-verifies every seat is still held by
+  this token, generates a phone-friendly reference, writes Booking + BookingSeats
+  + Payment, flips seats to Booked, sets the payment-window `HoldExpiresAt`.
+  Plus `GetByReferenceAsync`, `HistoryByPhoneAsync`, `ResubmitPaymentAsync`,
+  and `ExpireStaleAsync` (unpaid Reserved bookings past their window → Expired,
+  seats freed).
+- **`BookingMaintenanceBackgroundService`** — every 60 s sweeps abandoned holds
+  and expires stale reservations.
+- **Screens** (customer, bilingual): `/search` (results + day bar), `/book/{id}`
+  (`SeatChart` grid + hold countdown + passenger/payment step, InteractiveServer
+  no-prerender, releases the hold on dispose), `/booking/{ref}` (e-ticket stub
+  with status banner; `PaymentResubmit` island for rejected online payments).
+- `PhoneNumber.Normalize` → local `01XXXXXXXXX`. `BookingReference` uses an
+  unambiguous alphabet.
+
+Renamed the Blazor `SeatMap` component to `SeatChart` and the services namespace
+to `BusTicketing.Services.Bookings` to stop clashing with the `SeatMap` value
+object and `Booking` entity.
+
+Verified with `scratchpad/drive-m4.mjs`: search → seat map → 2-seat hold (timer
+shown) → online (bKash + txn id) and pay-at-counter bookings both land on the
+e-ticket with the right status; **two browsers on one trip — a seat held in one
+shows as "being booked" in the other**. 0 console errors.

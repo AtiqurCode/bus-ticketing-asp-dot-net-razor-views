@@ -1,0 +1,84 @@
+@inject IStringLocalizer<SharedResource> Loc
+
+<div class="seatplan">
+    @for (var deck = 1; deck <= Math.Max(Decks, 1); deck++)
+    {
+        var d = deck;
+        var deckSeats = Seats.Where(s => s.Deck == d).ToList();
+        if (deckSeats.Count == 0) { continue; }
+
+        @if (Decks > 1)
+        {
+            <div class="seatplan__deck-label">@(d == 1 ? Loc["Seat.LowerDeck"] : Loc["Seat.UpperDeck"])</div>
+        }
+
+        <div class="seatplan__cabin">
+            <div class="seatplan__wheel" aria-hidden="true">@Loc["Seat.Front"]</div>
+            <div class="seatplan__grid" style="grid-template-columns: repeat(@Columns, 1fr);">
+                @for (var row = 0; row < Rows; row++)
+                {
+                    var r = row;
+                    @for (var col = 0; col < Columns; col++)
+                    {
+                        var c = col;
+                        var seat = deckSeats.FirstOrDefault(s => s.Row == r && s.Column == c);
+                        if (seat is null)
+                        {
+                            <span class="seatplan__gap"></span>
+                        }
+                        else
+                        {
+                            <button type="button"
+                                    class="seatplan__seat @StatusClass(seat.Status)"
+                                    disabled="@(Disabled || !seat.Selectable && seat.Status != SeatViewStatus.Mine)"
+                                    aria-pressed="@(seat.Status == SeatViewStatus.Mine)"
+                                    aria-label="@AriaLabel(seat)"
+                                    title="@AriaLabel(seat)"
+                                    @onclick="() => OnSeatClicked.InvokeAsync(seat.Number)">
+                                @seat.Number
+                            </button>
+                        }
+                    }
+                }
+            </div>
+        </div>
+    }
+
+    <ul class="seatplan__legend">
+        <li><span class="swatch swatch--free"></span> @Loc["Seat.Legend.Available"]</li>
+        <li><span class="swatch swatch--mine"></span> @Loc["Seat.Legend.Selected"]</li>
+        <li><span class="swatch swatch--taken"></span> @Loc["Seat.Legend.Taken"]</li>
+        <li><span class="swatch swatch--booked"></span> @Loc["Seat.Legend.Booked"]</li>
+    </ul>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<SeatView> Seats { get; set; } = [];
+    [Parameter] public int Rows { get; set; }
+    [Parameter] public int Columns { get; set; }
+    [Parameter] public int Decks { get; set; } = 1;
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public EventCallback<string> OnSeatClicked { get; set; }
+
+    private static string StatusClass(SeatViewStatus s) => s switch
+    {
+        SeatViewStatus.Mine => "is-mine",
+        SeatViewStatus.Taken => "is-taken",
+        SeatViewStatus.Booked => "is-booked",
+        SeatViewStatus.Blocked => "is-blocked",
+        _ => "is-free"
+    };
+
+    private string AriaLabel(SeatView seat)
+    {
+        var state = seat.Status switch
+        {
+            SeatViewStatus.Mine => Loc["Seat.Legend.Selected"],
+            SeatViewStatus.Taken => Loc["Seat.Legend.Taken"],
+            SeatViewStatus.Booked => Loc["Seat.Legend.Booked"],
+            SeatViewStatus.Blocked => Loc["Seat.Legend.Booked"],
+            _ => Loc["Seat.Legend.Available"]
+        };
+        return $"{Loc["Seat.Seat"]} {seat.Number} — {state}";
+    }
+}

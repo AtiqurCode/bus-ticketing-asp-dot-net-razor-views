@@ -128,4 +128,86 @@
   <data name="NotFound.Title" xml:space="preserve"><value>পেজ পাওয়া যায়নি</value></data>
   <data name="NotFound.Body" xml:space="preserve"><value>আপনি যে পেজটি খুঁজছেন সেটি নেই বা সরানো হয়েছে।</value></data>
   <data name="NotFound.Home" xml:space="preserve"><value>হোমে ফিরুন</value></data>
+
+  <data name="Common.Optional" xml:space="preserve"><value>ঐচ্ছিক</value></data>
+
+  <data name="Search.Prompt.Title" xml:space="preserve"><value>কোথায় যাবেন?</value></data>
+  <data name="Search.Prompt.Body" xml:space="preserve"><value>উপরে যাত্রা, গন্তব্য ও তারিখ দিন — পাওয়া যাচ্ছে এমন বাস দেখুন।</value></data>
+  <data name="Search.NoResults.Title" xml:space="preserve"><value>এই রুটে এখনো বাস নেই</value></data>
+  <data name="Search.NoResults.Body" xml:space="preserve"><value>কাছাকাছি অন্য তারিখ দেখুন, অথবা কিছুক্ষণ পর আবার দেখুন — নিয়মিত নতুন সময়সূচি যোগ হয়।</value></data>
+  <data name="Search.ResultCount" xml:space="preserve"><value>{0}টি বাস পাওয়া গেছে</value></data>
+  <data name="Search.Boarding" xml:space="preserve"><value>ওঠার স্থান</value></data>
+  <data name="Search.SeatsLeft" xml:space="preserve"><value>{0}টি আসন খালি</value></data>
+  <data name="Search.SoldOut" xml:space="preserve"><value>টিকিট শেষ</value></data>
+  <data name="Search.SelectSeats" xml:space="preserve"><value>আসন বাছুন</value></data>
+
+  <data name="Seat.Front" xml:space="preserve"><value>সামনে</value></data>
+  <data name="Seat.Seat" xml:space="preserve"><value>আসন</value></data>
+  <data name="Seat.LowerDeck" xml:space="preserve"><value>নিচতলা</value></data>
+  <data name="Seat.UpperDeck" xml:space="preserve"><value>উপরতলা</value></data>
+  <data name="Seat.Legend.Available" xml:space="preserve"><value>খালি</value></data>
+  <data name="Seat.Legend.Selected" xml:space="preserve"><value>আপনার আসন</value></data>
+  <data name="Seat.Legend.Taken" xml:space="preserve"><value>বুক হচ্ছে</value></data>
+  <data name="Seat.Legend.Booked" xml:space="preserve"><value>বিক্রি হয়ে গেছে</value></data>
+
+  <data name="Book.Title" xml:space="preserve"><value>আসন বুক করুন</value></data>
+  <data name="Book.PickSeats" xml:space="preserve"><value>আপনার আসন বাছুন</value></data>
+  <data name="Book.YourDetails" xml:space="preserve"><value>যাত্রী ও পেমেন্ট</value></data>
+  <data name="Book.Summary" xml:space="preserve"><value>আপনার বুকিং</value></data>
+  <data name="Book.NoSeatsYet" xml:space="preserve"><value>ম্যাপে আসনে ট্যাপ করে বেছে নিন।</value></data>
+  <data name="Book.Seats" xml:space="preserve"><value>আসন</value></data>
+  <data name="Book.Total" xml:space="preserve"><value>মোট</value></data>
+  <data name="Book.Continue" xml:space="preserve"><value>এগিয়ে যান</value></data>
+  <data name="Book.HoldTimer" xml:space="preserve"><value>আসন ধরে রাখা হয়েছে</value></data>
+  <data name="Book.HoldExpired" xml:space="preserve"><value>আসন ধরে রাখার সময় শেষ — আবার বেছে নিন।</value></data>
+  <data name="Book.PassengerName" xml:space="preserve"><value>পুরো নাম</value></data>
+  <data name="Book.Phone" xml:space="preserve"><value>মোবাইল নম্বর</value></data>
+  <data name="Book.Email" xml:space="preserve"><value>ইমেইল</value></data>
+  <data name="Book.Dropping" xml:space="preserve"><value>নামার স্থান</value></data>
+  <data name="Book.HowToPay" xml:space="preserve"><value>কীভাবে পরিশোধ করবেন?</value></data>
+  <data name="Book.PayOnline" xml:space="preserve"><value>এখনই পরিশোধ (মোবাইল ব্যাংকিং)</value></data>
+  <data name="Book.PayOnline.Hint" xml:space="preserve"><value>আপনার ওয়ালেট থেকে ভাড়া পাঠিয়ে ট্রানজেকশন আইডি দিন যাচাইয়ের জন্য।</value></data>
+  <data name="Book.PayCounter" xml:space="preserve"><value>কাউন্টারে পরিশোধ</value></data>
+  <data name="Book.PayCounter.Hint" xml:space="preserve"><value>আমরা আসন ধরে রাখব। সময় শেষ হওয়ার আগে যেকোনো কাউন্টারে পরিশোধ করুন।</value></data>
+  <data name="Book.Mfs.Intro" xml:space="preserve"><value>আমাদের মার্চেন্ট নম্বরে ৳{0} পাঠান, তারপর কনফার্মেশন এসএমএস থেকে তথ্য দিন।</value></data>
+  <data name="Book.Mfs.Provider" xml:space="preserve"><value>ওয়ালেট</value></data>
+  <data name="Book.Mfs.Other" xml:space="preserve"><value>অন্যান্য</value></data>
+  <data name="Book.Mfs.SenderNumber" xml:space="preserve"><value>যে নম্বর থেকে পাঠিয়েছেন</value></data>
+  <data name="Book.Mfs.TransactionId" xml:space="preserve"><value>ট্রানজেকশন আইডি</value></data>
+  <data name="Book.Mfs.PickProvider" xml:space="preserve"><value>কোন ওয়ালেট থেকে পাঠিয়েছেন বেছে নিন।</value></data>
+  <data name="Book.ConfirmBooking" xml:space="preserve"><value>বুকিং নিশ্চিত করুন</value></data>
+  <data name="Book.Unavailable.Title" xml:space="preserve"><value>এই ট্রিপ বুক করা যাচ্ছে না</value></data>
+  <data name="Book.Unavailable.Body" xml:space="preserve"><value>এটি ছেড়ে গেছে বা বাতিল হয়েছে। অন্য বাসের জন্য আবার খুঁজুন।</value></data>
+
+  <data name="Confirm.Title" xml:space="preserve"><value>বুকিং</value></data>
+  <data name="Confirm.Reference" xml:space="preserve"><value>রেফারেন্স</value></data>
+  <data name="Confirm.ShowAtBoarding" xml:space="preserve"><value>ওঠার সময় এটি দেখান</value></data>
+  <data name="Confirm.Departure" xml:space="preserve"><value>ছাড়বে</value></data>
+  <data name="Confirm.Arrival" xml:space="preserve"><value>পৌঁছাবে</value></data>
+  <data name="Confirm.Bus" xml:space="preserve"><value>বাস</value></data>
+  <data name="Confirm.PaymentMethod" xml:space="preserve"><value>পেমেন্ট মাধ্যম</value></data>
+  <data name="Confirm.PaymentStatus" xml:space="preserve"><value>পেমেন্ট অবস্থা</value></data>
+  <data name="Confirm.HeldUntil" xml:space="preserve"><value>ধরে রাখা হবে</value></data>
+  <data name="Confirm.ViewMyTickets" xml:space="preserve"><value>আমার টিকিট দেখুন</value></data>
+  <data name="Confirm.Pay.Pending" xml:space="preserve"><value>যাচাইয়ের অপেক্ষায়</value></data>
+  <data name="Confirm.Pay.Verified" xml:space="preserve"><value>পরিশোধিত</value></data>
+  <data name="Confirm.Pay.Rejected" xml:space="preserve"><value>যাচাই হয়নি</value></data>
+  <data name="Confirm.Pay.Refunded" xml:space="preserve"><value>ফেরত দেওয়া হয়েছে</value></data>
+  <data name="Confirm.NotFound.Title" xml:space="preserve"><value>বুকিং পাওয়া যায়নি</value></data>
+  <data name="Confirm.NotFound.Body" xml:space="preserve"><value>রেফারেন্স মিলিয়ে দেখুন, অথবা ফোন নম্বর দিয়ে খুঁজুন।</value></data>
+  <data name="Confirm.Banner.Confirmed.Title" xml:space="preserve"><value>সব প্রস্তুত</value></data>
+  <data name="Confirm.Banner.Confirmed.Body" xml:space="preserve"><value>আপনার আসন নিশ্চিত হয়েছে। ওঠার সময় উপরের রেফারেন্সটি দেখান।</value></data>
+  <data name="Confirm.Banner.Pending.Title" xml:space="preserve"><value>প্রায় হয়ে গেছে</value></data>
+  <data name="Confirm.Banner.PendingOnline.Body" xml:space="preserve"><value>আমরা আপনার ট্রানজেকশন আইডি পেয়েছি। শীঘ্রই একজন স্টাফ যাচাই করে বুকিং নিশ্চিত করবেন।</value></data>
+  <data name="Confirm.Banner.PendingCounter.Body" xml:space="preserve"><value>আপনার আসন সংরক্ষিত। সময় শেষ হওয়ার আগে যেকোনো কাউন্টারে পরিশোধ করে নিশ্চিত করুন।</value></data>
+  <data name="Confirm.Banner.Rejected.Title" xml:space="preserve"><value>পেমেন্ট যাচাই করা যায়নি</value></data>
+  <data name="Confirm.Banner.Rejected.Body" xml:space="preserve"><value>সময় শেষ হওয়ার আগে নিচে তথ্য মিলিয়ে আবার জমা দিন।</value></data>
+  <data name="Confirm.Banner.Cancelled.Title" xml:space="preserve"><value>বুকিং বাতিল</value></data>
+  <data name="Confirm.Banner.Cancelled.Body" xml:space="preserve"><value>এই বুকিংটি বাতিল করা হয়েছে।</value></data>
+  <data name="Confirm.Banner.Expired.Title" xml:space="preserve"><value>সংরক্ষণের সময় শেষ</value></data>
+  <data name="Confirm.Banner.Expired.Body" xml:space="preserve"><value>সময়মতো পরিশোধ না হওয়ায় আসনগুলো ছেড়ে দেওয়া হয়েছে। আবার বুক করুন।</value></data>
+  <data name="Confirm.Resubmit.Title" xml:space="preserve"><value>পেমেন্ট আবার জমা দিন</value></data>
+  <data name="Confirm.Resubmit.Reason" xml:space="preserve"><value>কারণ</value></data>
+  <data name="Confirm.Resubmit.Submit" xml:space="preserve"><value>আবার জমা দিন</value></data>
+  <data name="Confirm.Resubmit.Done" xml:space="preserve"><value>ধন্যবাদ — আমরা নতুন তথ্য যাচাই করব।</value></data>
 </root>

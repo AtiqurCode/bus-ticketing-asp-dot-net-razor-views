@@ -1,31 +1,117 @@
 @page "/search"
+@inject TripSearchService SearchService
+@inject IDbContextFactory<BusTicketing.Data.AppDbContext> DbFactory
+@inject SettingsService Settings
+@inject IAppClock Clock
 @inject IStringLocalizer<SharedResource> Loc
 
-<PageTitle>@Loc["Nav.Search"]</PageTitle>
+<PageTitle>@(HasQuery ? $"{From} → {To}" : Loc["Nav.Search"])</PageTitle>
 
-<div class="container page stack">
-    <h1>@Loc["Nav.Search"]</h1>
+<section class="search-hero">
+    <div class="container">
+        <form class="search-bar card" method="get" action="/search">
+            <div class="search-bar__fields">
+                <div class="field">
+                    <label for="from">@Loc["Home.Search.From"]</label>
+                    <input id="from" name="from" class="input" list="loc-list" autocomplete="off"
+                           value="@From" required />
+                </div>
+                <div class="field">
+                    <label for="to">@Loc["Home.Search.To"]</label>
+                    <input id="to" name="to" class="input" list="loc-list" autocomplete="off"
+                           value="@To" required />
+                </div>
+                <div class="field">
+                    <label for="date">@Loc["Home.Search.Date"]</label>
+                    <input id="date" name="date" type="date" class="input"
+                           value="@DateValue" min="@_minDate" max="@_maxDate" />
+                </div>
+                <button type="submit" class="btn btn--accent">@Loc["Common.Search"]</button>
+            </div>
+            <datalist id="loc-list">
+                @foreach (var name in _places)
+                {
+                    <option value="@name"></option>
+                }
+            </datalist>
+        </form>
+    </div>
+</section>
 
-    @if (HasQuery)
+<div class="container page">
+    @if (!HasQuery)
     {
-        <p class="muted">
-            @From <span aria-hidden="true">→</span> @To@(string.IsNullOrEmpty(Date) ? "" : $" · {Date}")
-        </p>
-    }
-
-    <div class="card">
-        <div class="card__body centered" style="min-height: 30vh;">
+        <div class="centered" style="min-height: 30vh;">
             <div class="centered__inner">
-                <span class="centered__code">Soon</span>
-                <h3>Trip search is being wired up</h3>
-                <p class="muted">
-                    Routes, schedules and live seat maps land in the next milestones.
-                    Your search for <strong>@(From ?? "—")</strong> to <strong>@(To ?? "—")</strong> is noted.
-                </p>
-                <a class="btn btn--ghost" href="/">@Loc["NotFound.Home"]</a>
+                <h2>@Loc["Search.Prompt.Title"]</h2>
+                <p class="muted">@Loc["Search.Prompt.Body"]</p>
             </div>
         </div>
-    </div>
+    }
+    else
+    {
+        <div class="daybar">
+            @foreach (var day in _dayOptions)
+            {
+                <a class="daybar__day @(day == _date ? "is-active" : "")"
+                   href="@DayUrl(day)">
+                    <span class="daybar__dow">@day.ToString("ddd")</span>
+                    <span class="daybar__date">@day.ToString("d MMM")</span>
+                </a>
+            }
+        </div>
+
+        <h1 class="search-title">
+            @From <span aria-hidden="true">→</span> @To
+        </h1>
+
+        @if (_results.Count == 0)
+        {
+            <div class="card"><div class="card__body centered" style="min-height: 24vh;">
+                <div class="centered__inner">
+                    <h3>@Loc["Search.NoResults.Title"]</h3>
+                    <p class="muted">@Loc["Search.NoResults.Body"]</p>
+                </div>
+            </div></div>
+        }
+        else
+        {
+            <p class="muted text-sm">@string.Format(Loc["Search.ResultCount"], _results.Count)</p>
+            <div class="results">
+                @foreach (var r in _results)
+                {
+                    <article class="result">
+                        <div class="result__time">
+                            <div class="result__depart">@Clock.ToLocal(r.DepartureTime).ToString("HH:mm")</div>
+                            <div class="result__line" aria-hidden="true"></div>
+                            <div class="result__arrive">@Clock.ToLocal(r.ArrivalTime).ToString("HH:mm")</div>
+                            <div class="result__dur muted text-sm">@FormatDuration(r.Duration)</div>
+                        </div>
+                        <div class="result__body">
+                            <div class="result__op">@r.Operator</div>
+                            <div class="result__bus muted text-sm">@r.BusName · <span class="badge">@r.ClassLabel</span></div>
+                            @if (r.BoardingPoint is not null)
+                            {
+                                <div class="result__stop muted text-sm">@Loc["Search.Boarding"]: @r.BoardingPoint</div>
+                            }
+                        </div>
+                        <div class="result__cta">
+                            <div class="result__fare">৳@r.Fare.ToString("0")</div>
+                            @if (r.SoldOut)
+                            {
+                                <span class="badge badge--danger">@Loc["Search.SoldOut"]</span>
+                            }
+                            else
+                            {
+                                <div class="result__seats muted text-sm">@string.Format(Loc["Search.SeatsLeft"], r.SeatsAvailable)</div>
+                                <a class="btn" href="/book/@r.TripId">@Loc["Search.SelectSeats"]</a>
+                            }
+                        </div>
+                    </article>
+                }
+            </div>
+        }
+    }
 </div>
 
 @code {
@@ -33,5 +119,44 @@
     [SupplyParameterFromQuery] private string? To { get; set; }
     [SupplyParameterFromQuery] private string? Date { get; set; }
 
-    private bool HasQuery => !string.IsNullOrWhiteSpace(From) || !string.IsNullOrWhiteSpace(To);
+    private DateOnly _date;
+    private string _minDate = "";
+    private string _maxDate = "";
+    private List<string> _places = [];
+    private List<DateOnly> _dayOptions = [];
+    private IReadOnlyList<TripSearchResult> _results = [];
+
+    private bool HasQuery => !string.IsNullOrWhiteSpace(From) && !string.IsNullOrWhiteSpace(To);
+    private string DateValue => _date == default ? "" : _date.ToString("yyyy-MM-dd");
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var today = Clock.LocalToday;
+        var windowDays = Settings.Current.GenerationWindowDays;
+        _minDate = today.ToString("yyyy-MM-dd");
+        _maxDate = today.AddDays(windowDays).ToString("yyyy-MM-dd");
+
+        _date = DateOnly.TryParse(Date, out var d) && d >= today && d <= today.AddDays(windowDays)
+            ? d : today;
+
+        _dayOptions = Enumerable.Range(0, Math.Min(windowDays + 1, 7))
+            .Select(i => today.AddDays(i))
+            .ToList();
+        if (!_dayOptions.Contains(_date))
+            _dayOptions.Insert(0, _date);
+
+        await using (var db = await DbFactory.CreateDbContextAsync())
+        {
+            _places = await db.Locations.Where(l => l.IsActive)
+                .Select(l => l.Name).Distinct().OrderBy(n => n).ToListAsync();
+        }
+
+        if (HasQuery)
+            _results = await SearchService.SearchAsync(From!, To!, _date);
+    }
+
+    private string DayUrl(DateOnly day) =>
+        $"/search?from={Uri.EscapeDataString(From ?? "")}&to={Uri.EscapeDataString(To ?? "")}&date={day:yyyy-MM-dd}";
+
+    private static string FormatDuration(TimeSpan d) => $"{(int)d.TotalHours}h {d.Minutes:00}m";
 }
