@@ -67,25 +67,25 @@ else
                 @foreach (var b in _page.Items)
                 {
                     <tr class="clickrow" @onclick="() => Open(b.Id)">
-                        <td>
-                            <strong>@b.Reference</strong>
+                        <td data-label="Reference">
+                            <span><strong>@b.Reference</strong>
                             @if (b.IsCounterSale)
                             {
                                 <span class="badge" style="margin-inline-start: 6px;">Counter</span>
-                            }
+                            }</span>
                         </td>
-                        <td>@b.PassengerName<div class="muted text-sm">@b.PassengerPhone</div></td>
-                        <td>
-                            @b.RouteName
-                            <div class="muted text-sm">@Clock.ToLocal(b.DepartureTime).ToString("ddd d MMM, HH:mm")</div>
+                        <td data-label="Passenger"><span>@b.PassengerName <span class="muted text-sm">@b.PassengerPhone</span></span></td>
+                        <td data-label="Trip">
+                            <span>@b.RouteName
+                            <span class="muted text-sm">@Clock.ToLocal(b.DepartureTime).ToString("ddd d MMM, HH:mm")</span></span>
                         </td>
-                        <td>@b.SeatSummary</td>
-                        <td class="num">৳@b.TotalAmount.ToString("0")</td>
-                        <td>
-                            <span class="text-sm">@b.PaymentMode</span>
-                            <span class="badge @PayBadge(b.PaymentStatus)">@b.PaymentStatus</span>
+                        <td data-label="Seats">@b.SeatSummary</td>
+                        <td class="num" data-label="Amount">৳@b.TotalAmount.ToString("0")</td>
+                        <td data-label="Payment">
+                            <span><span class="text-sm">@b.PaymentMode</span>
+                            <span class="badge @PayBadge(b.PaymentStatus)">@b.PaymentStatus</span></span>
                         </td>
-                        <td><span class="badge @StatusBadge(b.Status)">@b.Status</span></td>
+                        <td data-label="Status"><span class="badge @StatusBadge(b.Status)">@b.Status</span></td>
                     </tr>
                 }
             </tbody>
@@ -103,6 +103,8 @@ else
 }
 
 @code {
+    [SupplyParameterFromQuery] private string? Status { get; set; }
+
     private BookingPage _page = new([], 0, 1, 30);
     private List<BusRoute> _routes = [];
     private string? _search;
@@ -115,6 +117,7 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        if (Enum.TryParse<BookingStatus>(Status, out var s)) _status = s;
         _routes = await Routes.ActiveAsync();
         await Reload();
     }

@@ -11,8 +11,8 @@
             @foreach (var item in section.Items)
             {
                 <AuthorizeView Policy="@(item.SuperAdminOnly ? AuthPolicies.SuperAdmin : AuthPolicies.BackOffice)">
-                    <NavLink class="anav__link" href="@item.Href" Match="item.Match">
-                        <span class="anav__icon" aria-hidden="true">@item.Icon</span>
+                    <NavLink class="anav__link" href="@item.Href" Match="item.Match" onclick="AdminNav.close()">
+                        <span class="anav__icon"><Icon Name="@item.Icon" Size="18" /></span>
                         <span>@item.Label</span>
                     </NavLink>
                 </AuthorizeView>
@@ -27,27 +27,29 @@
     [
         new(null,
         [
-            new("/staff", Loc["Admin.Nav.Dashboard"], "▚", NavLinkMatch.All)
+            new("/staff", Loc["Admin.Nav.Dashboard"], "dashboard", NavLinkMatch.All)
         ]),
         new("Operations",
         [
-            new("/staff/sell", Loc["Admin.Nav.Sell"], "＋"),
-            new("/staff/bookings", Loc["Admin.Nav.Bookings"], "🎟"),
-            new("/staff/payments", Loc["Admin.Nav.Payments"], "৳"),
-            new("/staff/trips", Loc["Admin.Nav.Trips"], "🚌")
+            new("/staff/sell", Loc["Admin.Nav.Sell"], "plus-circle"),
+            new("/staff/scan", Loc["Admin.Nav.Scan"], "scan"),
+            new("/staff/bookings", Loc["Admin.Nav.Bookings"], "ticket"),
+            new("/staff/payments", Loc["Admin.Nav.Payments"], "wallet"),
+            new("/staff/trips", Loc["Admin.Nav.Trips"], "bus")
         ]),
         new("Planning",
         [
-            new("/staff/schedules", Loc["Admin.Nav.Schedules"], "🗓", SuperAdminOnly: true),
-            new("/staff/routes", Loc["Admin.Nav.Routes"], "↔", SuperAdminOnly: true),
-            new("/staff/buses", Loc["Admin.Nav.Buses"], "▤", SuperAdminOnly: true),
-            new("/staff/locations", Loc["Admin.Nav.Locations"], "◉", SuperAdminOnly: true)
+            new("/staff/schedules", Loc["Admin.Nav.Schedules"], "calendar", SuperAdminOnly: true),
+            new("/staff/routes", Loc["Admin.Nav.Routes"], "route", SuperAdminOnly: true),
+            new("/staff/buses", Loc["Admin.Nav.Buses"], "seat", SuperAdminOnly: true),
+            new("/staff/locations", Loc["Admin.Nav.Locations"], "pin", SuperAdminOnly: true)
         ]),
         new("Administration",
         [
-            new("/staff/staff", Loc["Admin.Nav.Staff"], "◐", SuperAdminOnly: true),
-            new("/staff/settings", Loc["Admin.Nav.Settings"], "⚙", SuperAdminOnly: true),
-            new("/staff/audit", Loc["Admin.Nav.AuditLog"], "⧉", SuperAdminOnly: true)
+            new("/staff/staff", Loc["Admin.Nav.Staff"], "users", SuperAdminOnly: true),
+            new("/staff/cancellation-policy", Loc["Admin.Nav.CancellationPolicy"], "rotate", SuperAdminOnly: true),
+            new("/staff/settings", Loc["Admin.Nav.Settings"], "gear", SuperAdminOnly: true),
+            new("/staff/audit", Loc["Admin.Nav.AuditLog"], "clipboard", SuperAdminOnly: true)
         ])
     ];
 

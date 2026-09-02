@@ -4,9 +4,7 @@
     padding-block: var(--space-5);
 }
 
-.search-bar {
-    padding: var(--space-4);
-}
+.search-bar { padding: var(--space-4); }
 
 .search-bar__fields {
     display: grid;
@@ -45,48 +43,8 @@
 
 .search-title { margin-bottom: var(--space-4); }
 
-.results { display: flex; flex-direction: column; gap: var(--space-3); }
-
-.result {
-    display: grid;
-    grid-template-columns: 130px 1fr auto;
-    gap: var(--space-5);
-    align-items: center;
-    padding: var(--space-4) var(--space-5);
-    background: var(--surface);
-    border: 1px solid var(--line);
-    border-radius: var(--radius-lg);
-    transition: box-shadow .15s ease, border-color .15s ease;
-}
-
-.result:hover { box-shadow: var(--shadow-md); border-color: var(--ink-300); }
-
-.result__time { text-align: center; }
-.result__depart, .result__arrive { font-size: var(--text-lg); font-weight: 700; font-variant-numeric: tabular-nums; }
-.result__line { height: 1px; background: var(--ink-300); margin: 6px auto; width: 60%; position: relative; }
-.result__line::after {
-    content: "";
-    position: absolute; right: -1px; top: -2px;
-    border: 3px solid transparent; border-left-color: var(--ink-300);
-}
-.result__dur { margin-top: 4px; }
-
-.result__op { font-weight: 700; font-size: var(--text-lg); }
-.result__bus { margin-top: 2px; }
-.result__stop { margin-top: var(--space-2); }
-
-.result__cta { text-align: end; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
-.result__fare { font-size: var(--text-xl); font-weight: 700; }
-.result__cta .btn { margin-top: var(--space-2); }
-
 @media (max-width: 760px) {
     .search-bar__fields { grid-template-columns: 1fr 1fr; }
     .search-bar__fields .field:nth-child(3) { grid-column: 1 / -1; }
     .search-bar__fields .btn { grid-column: 1 / -1; }
-    .result {
-        grid-template-columns: 96px 1fr;
-        gap: var(--space-3);
-    }
-    .result__cta { grid-column: 1 / -1; flex-direction: row; align-items: center; justify-content: space-between; }
-    .result__cta .btn { margin-top: 0; }
 }

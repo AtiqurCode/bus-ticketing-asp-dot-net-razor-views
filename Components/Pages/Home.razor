@@ -37,7 +37,7 @@
                 <div class="field">
                     <label for="date">@Loc["Home.Search.Date"]</label>
                     <input id="date" name="date" type="date" class="input"
-                           value="@_today" min="@_today" max="@_maxDate" />
+                           value="@_today" min="@_minDate" max="@_maxDate" />
                 </div>
                 <button type="submit" class="btn btn--accent btn--lg searchbox__submit">
                     @Loc["Home.Search.Submit"]
@@ -99,12 +99,16 @@
     private List<string> _cityNames = [];
     private List<PopularRoute> _popularRoutes = [];
     private string _today = "";
+    private string _minDate = "";
     private string _maxDate = "";
 
     protected override async Task OnInitializedAsync()
     {
         var today = Clock.LocalToday;
-        _today = today.ToString("yyyy-MM-dd");
+        // Late in the day most of today's buses have already left — start on tomorrow.
+        var startDay = Clock.ToLocal(Clock.UtcNow).Hour >= 18 ? today.AddDays(1) : today;
+        _today = startDay.ToString("yyyy-MM-dd");
+        _minDate = today.ToString("yyyy-MM-dd");
         _maxDate = today.AddDays(Settings.Current.GenerationWindowDays).ToString("yyyy-MM-dd");
 
         await using var db = await DbFactory.CreateDbContextAsync();

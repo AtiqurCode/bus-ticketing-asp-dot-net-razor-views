@@ -4,9 +4,16 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BusTicketing.Services.Admin;
 
+public sealed record LocationPage(IReadOnlyList<Location> Items, int Total, int Page, int PageSize)
+{
+    public int TotalPages => (int)Math.Ceiling(Total / (double)PageSize);
+}
+
 public sealed class LocationService(IDbContextFactory<AppDbContext> dbFactory, AuditService audit)
 {
-    public async Task<List<Location>> ListAsync(string? search = null, LocationType? type = null, CancellationToken ct = default)
+    public async Task<LocationPage> ListAsync(
+        string? search = null, LocationType? type = null,
+        int page = 1, int pageSize = 25, CancellationToken ct = default)
     {
         await using var db = await dbFactory.CreateDbContextAsync(ct);
         var query = db.Locations.Include(l => l.Parent).AsNoTracking();
@@ -23,9 +30,15 @@ public sealed class LocationService(IDbContextFactory<AppDbContext> dbFactory, A
                 (l.NameBn != null && EF.Functions.ILike(l.NameBn, term)));
         }
 
-        return await query
-            .OrderBy(l => l.Division).ThenBy(l => l.District).ThenBy(l => l.Type).ThenBy(l => l.Name)
+        query = query.OrderBy(l => l.Division).ThenBy(l => l.District).ThenBy(l => l.Type).ThenBy(l => l.Name);
+
+        var total = await query.CountAsync(ct);
+        var items = await query
+            .Skip((Math.Max(page, 1) - 1) * pageSize)
+            .Take(pageSize)
             .ToListAsync(ct);
+
+        return new LocationPage(items, total, page, pageSize);
     }
 
     /// <summary>Cities available as a parent for a terminal/counter.</summary>

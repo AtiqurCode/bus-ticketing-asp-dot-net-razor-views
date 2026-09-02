@@ -50,21 +50,21 @@ else
                 @foreach (var b in _rows)
                 {
                     <tr>
-                        <td>
-                            <strong>@b.Name</strong>
+                        <td data-label="Bus">
+                            <span><strong>@b.Name</strong>
                             @if (!string.IsNullOrEmpty(b.RegistrationNumber))
                             {
-                                <div class="muted text-sm">@b.RegistrationNumber</div>
-                            }
+                                <span class="muted text-sm"> @b.RegistrationNumber</span>
+                            }</span>
                         </td>
-                        <td>@b.Operator</td>
-                        <td><span class="badge">@b.ClassLabel</span></td>
-                        <td class="num">@b.TotalSeats</td>
-                        <td><StatusPill Active="b.IsActive" /></td>
+                        <td data-label="Operator">@b.Operator</td>
+                        <td data-label="Class"><span class="badge">@b.ClassLabel</span></td>
+                        <td class="num" data-label="Seats">@b.TotalSeats</td>
+                        <td data-label="Status"><StatusPill Active="b.IsActive" /></td>
                         <td class="actions">
                             <div class="row-actions">
-                                <button class="icon-btn" title="Edit" @onclick="() => Edit(b.Id)">✎</button>
-                                <button class="icon-btn icon-btn--danger" title="Delete" @onclick="() => _deleteTarget = b">🗑</button>
+                                <button class="icon-btn" title="Edit" @onclick="() => Edit(b.Id)"><Icon Name="pencil" /></button>
+                                <button class="icon-btn icon-btn--danger" title="Delete" @onclick="() => _deleteTarget = b"><Icon Name="trash" /></button>
                             </div>
                         </td>
                     </tr>

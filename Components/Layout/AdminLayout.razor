@@ -2,25 +2,28 @@
 @inject SettingsService Settings
 @inject IStringLocalizer<SharedResource> Loc
 
-<div class="admin">
-    <input type="checkbox" id="admin-nav-toggle" class="admin__nav-state" hidden />
+@* The layout renders as static SSR (a page's @rendermode doesn't flow up to its
+   layout), so the drawer is toggled with a one-line inline script rather than
+   Blazor state. *@
 
+<div class="admin">
     <aside class="admin__sidebar">
-        <a href="/staff" class="admin__brand">
+        <a href="/staff" class="admin__brand" onclick="AdminNav.close()">
             <span class="admin__mark" aria-hidden="true">TB</span>
             <span>@Settings.Current.SiteName</span>
         </a>
         <AdminNav />
     </aside>
 
+    <div class="admin__scrim" onclick="AdminNav.close()"></div>
+
     <div class="admin__body">
         <header class="admin__topbar">
-            <label for="admin-nav-toggle" class="admin__burger" aria-label="Toggle navigation">
-                <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
-                    <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/>
-                </svg>
-            </label>
+            <button type="button" class="admin__burger" aria-label="Menu" onclick="AdminNav.toggle()">
+                <Icon Name="dashboard" Size="20" />
+            </button>
 
+            <span class="admin__title">@Settings.Current.SiteName</span>
             <div class="admin__topbar-spacer"></div>
 
             <LanguageSwitcher />
@@ -28,11 +31,14 @@
             <AuthorizeView>
                 <div class="admin__user">
                     <span class="admin__user-name">@context.User.Identity?.Name</span>
-                    <span class="admin__user-role badge">@RoleLabel(context.User)</span>
+                    <span class="admin__user-role">@RoleLabel(context.User)</span>
                 </div>
             </AuthorizeView>
 
-            <a href="/staff/logout" class="admin__signout">@Loc["Login.SignOut"]</a>
+            <a href="/staff/logout" class="admin__signout" title="@Loc["Login.SignOut"]">
+                <Icon Name="power" Size="18" />
+                <span class="admin__signout-text">@Loc["Login.SignOut"]</span>
+            </a>
         </header>
 
         <main class="admin__content">
@@ -40,6 +46,13 @@
         </main>
     </div>
 </div>
+
+<script>
+    window.AdminNav = {
+        toggle() { document.querySelector('.admin')?.classList.toggle('is-nav-open'); },
+        close() { document.querySelector('.admin')?.classList.remove('is-nav-open'); }
+    };
+</script>
 
 @code {
     private static string RoleLabel(System.Security.Claims.ClaimsPrincipal user) =>

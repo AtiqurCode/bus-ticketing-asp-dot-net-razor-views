@@ -48,11 +48,11 @@ else
                 @foreach (var e in _page.Items)
                 {
                     <tr>
-                        <td class="muted text-sm" style="white-space: nowrap;">@e.CreatedAt.ToLocalTime().ToString("d MMM yyyy, HH:mm")</td>
-                        <td>@e.ActorName</td>
-                        <td><code class="audit-action">@e.Action</code></td>
-                        <td>@e.Summary</td>
-                        <td class="muted text-sm">@e.EntityType</td>
+                        <td class="muted text-sm" data-label="When" style="white-space: nowrap;">@e.CreatedAt.ToLocalTime().ToString("d MMM yyyy, HH:mm")</td>
+                        <td data-label="Who">@e.ActorName</td>
+                        <td data-label="Action"><code class="audit-action">@e.Action</code></td>
+                        <td data-label="Summary">@e.Summary</td>
+                        <td class="muted text-sm" data-label="Entity">@e.EntityType</td>
                     </tr>
                 }
             </tbody>

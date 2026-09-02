@@ -64,7 +64,7 @@ public sealed class AuditService(
     public async Task<AuditPage> QueryAsync(
         string? action = null, string? search = null,
         DateTimeOffset? from = null, DateTimeOffset? to = null,
-        int page = 1, int pageSize = 40, CancellationToken ct = default)
+        int page = 1, int pageSize = 25, CancellationToken ct = default)
     {
         await using var db = await dbFactory.CreateDbContextAsync(ct);
         var query = db.AuditLogs.AsNoTracking().AsQueryable();

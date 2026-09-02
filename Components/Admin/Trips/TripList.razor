@@ -72,29 +72,25 @@ else
                 @foreach (var t in _page.Items)
                 {
                     <tr>
-                        <td>
-                            <strong>@ToLocal(t.DepartureTime).ToString("ddd d MMM")</strong>
-                            <div class="muted text-sm">@ToLocal(t.DepartureTime).ToString("HH:mm")</div>
+                        <td data-label="Departure">
+                            <span><strong>@ToLocal(t.DepartureTime).ToString("ddd d MMM")</strong>
+                            <span class="muted text-sm">@ToLocal(t.DepartureTime).ToString("HH:mm")</span></span>
                         </td>
-                        <td>@t.RouteName</td>
-                        <td>@t.BusName<div class="muted text-sm">@t.Operator</div></td>
-                        <td class="num">৳@t.Fare.ToString("0")</td>
-                        <td class="num">
-                            @t.SeatsBooked / @t.TotalSeats
-                            @if (t.SeatsHeld > 0)
-                            {
-                                <span class="muted text-sm"> (@t.SeatsHeld held)</span>
-                            }
+                        <td data-label="Route">@t.RouteName</td>
+                        <td data-label="Bus"><span>@t.BusName <span class="muted text-sm">@t.Operator</span></span></td>
+                        <td class="num" data-label="Fare">৳@t.Fare.ToString("0")</td>
+                        <td class="num" data-label="Seats">
+                            <span>@t.SeatsBooked / @t.TotalSeats@(t.SeatsHeld > 0 ? $" ({t.SeatsHeld} held)" : "")</span>
                         </td>
-                        <td><span class="badge @StatusClass(t.Status)">@t.Status</span></td>
-                        <td class="text-sm muted">@(t.IsManualOverride ? "Manual" : "Schedule")</td>
+                        <td data-label="Status"><span class="badge @StatusClass(t.Status)">@t.Status</span></td>
+                        <td class="text-sm muted" data-label="Source">@(t.IsManualOverride ? "Manual" : "Schedule")</td>
                         <td class="actions">
                             <div class="row-actions">
                                 <button class="icon-btn" title="Edit" @onclick="() => Edit(t.Id)"
-                                        disabled="@(t.Status is TripStatus.Completed or TripStatus.Departed)">✎</button>
+                                        disabled="@(t.Status is TripStatus.Completed or TripStatus.Departed)"><Icon Name="pencil" /></button>
                                 @if (t.Status is TripStatus.Scheduled)
                                 {
-                                    <button class="icon-btn icon-btn--danger" title="Cancel trip" @onclick="() => _cancelTarget = t">✕</button>
+                                    <button class="icon-btn icon-btn--danger" title="Cancel trip" @onclick="() => _cancelTarget = t"><Icon Name="x" /></button>
                                 }
                             </div>
                         </td>

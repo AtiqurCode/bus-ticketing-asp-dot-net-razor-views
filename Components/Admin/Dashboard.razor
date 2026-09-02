@@ -1,12 +1,14 @@
 @page "/staff"
 @rendermode InteractiveServer
 @inject IDbContextFactory<AppDbContext> DbFactory
+@inject IAppClock Clock
 @inject IStringLocalizer<SharedResource> Loc
 
 <PageTitle>@Loc["Admin.Nav.Dashboard"]</PageTitle>
 
 <AuthorizeView>
-    <PageHeading Title="@($"{Loc["Admin.Dashboard.Welcome"]}, {context.User.Identity?.Name}")" />
+    <PageHeading Title="@($"{Loc["Admin.Dashboard.Welcome"]}, {context.User.Identity?.Name}")"
+                 Description="@Clock.ToLocal(Clock.UtcNow).ToString("dddd, d MMMM yyyy")" />
 </AuthorizeView>
 
 @if (_loading)
@@ -16,74 +18,104 @@
 else
 {
     <div class="tiles">
-        <div class="tile">
-            <div class="tile__label">Routes</div>
-            <div class="tile__value">@_stats.Routes</div>
-            <div class="tile__hint">@_stats.ActiveRoutes active</div>
-        </div>
-        <div class="tile">
-            <div class="tile__label">Buses</div>
-            <div class="tile__value">@_stats.Buses</div>
-            <div class="tile__hint">@_stats.Seats seats across the fleet</div>
-        </div>
-        <div class="tile">
-            <div class="tile__label">Locations</div>
-            <div class="tile__value">@_stats.Locations</div>
-            <div class="tile__hint">@_stats.Terminals terminals &amp; counters</div>
-        </div>
-        <div class="tile">
-            <div class="tile__label">Staff accounts</div>
-            <div class="tile__value">@_stats.Staff</div>
-        </div>
+        <a class="tile tile--link" href="/staff/bookings">
+            <div class="tile__label">Bookings today</div>
+            <div class="tile__value">@_s.BookingsToday</div>
+            <div class="tile__hint">৳@_s.RevenueToday.ToString("#,0") confirmed</div>
+        </a>
+        <a class="tile tile--link" href="/staff/payments">
+            <div class="tile__label">Payments to review</div>
+            <div class="tile__value">@_s.PendingPayments</div>
+            <div class="tile__hint">@(_s.PendingPayments == 0 ? "all clear" : "waiting for a decision")</div>
+        </a>
+        <a class="tile tile--link" href="/staff/trips">
+            <div class="tile__label">Trips next 24h</div>
+            <div class="tile__value">@_s.UpcomingTrips</div>
+            <div class="tile__hint">@_s.SeatsSoldUpcoming seats sold</div>
+        </a>
+        <a class="tile tile--link" href="/staff/bookings?status=Reserved">
+            <div class="tile__label">Reserved (unpaid)</div>
+            <div class="tile__value">@_s.ReservedHolds</div>
+            <div class="tile__hint">counter &amp; pending online</div>
+        </a>
     </div>
 
     <AuthorizeView Policy="@AuthPolicies.SuperAdmin">
-        <div class="card" style="margin-top: var(--space-5); max-width: 640px;">
-            <div class="card__body stack">
-                <h3>Get set up</h3>
-                <p class="muted text-sm" style="margin: 0;">
-                    Schedules and booking screens arrive next. Meanwhile, build out the
-                    fleet and network:
-                </p>
-                <div class="quicklinks">
-                    <a class="btn btn--ghost btn--sm" href="/staff/buses/new">Add a bus</a>
-                    <a class="btn btn--ghost btn--sm" href="/staff/routes/new">Add a route</a>
-                    <a class="btn btn--ghost btn--sm" href="/staff/locations/new">Add a terminal</a>
-                    <a class="btn btn--ghost btn--sm" href="/staff/staff/new">Add staff</a>
+        <div class="tiles" style="margin-top: var(--space-4);">
+            <div class="tile"><div class="tile__label">Routes</div><div class="tile__value">@_s.Routes</div><div class="tile__hint">@_s.ActiveRoutes active</div></div>
+            <div class="tile"><div class="tile__label">Buses</div><div class="tile__value">@_s.Buses</div><div class="tile__hint">@_s.Seats seats total</div></div>
+            <div class="tile"><div class="tile__label">Schedules</div><div class="tile__value">@_s.Schedules</div><div class="tile__hint">@_s.ActiveSchedules running</div></div>
+            <div class="tile"><div class="tile__label">Staff</div><div class="tile__value">@_s.Staff</div></div>
+        </div>
+
+        @if (_s.Buses == 0 || _s.Routes == 0)
+        {
+            <div class="card" style="margin-top: var(--space-5); max-width: 640px;">
+                <div class="card__body stack">
+                    <h3>Finish setup</h3>
+                    <p class="muted text-sm" style="margin: 0;">Add a bus and a route, then create a schedule to start generating trips.</p>
+                    <div class="quicklinks">
+                        <a class="btn btn--ghost btn--sm" href="/staff/buses/new">Add a bus</a>
+                        <a class="btn btn--ghost btn--sm" href="/staff/routes/new">Add a route</a>
+                        <a class="btn btn--ghost btn--sm" href="/staff/schedules/new">Add a schedule</a>
+                    </div>
                 </div>
             </div>
-        </div>
+        }
     </AuthorizeView>
 }
 
 @code {
-    private DashboardStats _stats = new();
+    private Stats _s = new();
     private bool _loading = true;
 
     protected override async Task OnInitializedAsync()
     {
+        var now = Clock.UtcNow;
+        var dayStart = Clock.ToInstant(Clock.LocalToday, TimeOnly.MinValue);
+        var dayEnd = Clock.ToInstant(Clock.LocalToday.AddDays(1), TimeOnly.MinValue);
+        var soon = now.AddHours(24);
+
         await using var db = await DbFactory.CreateDbContextAsync();
-        _stats = new DashboardStats
+
+        _s = new Stats
         {
+            BookingsToday = await db.Bookings.CountAsync(b => b.CreatedAt >= dayStart && b.CreatedAt < dayEnd
+                && b.Status != BookingStatus.Cancelled && b.Status != BookingStatus.Expired),
+            RevenueToday = await db.Bookings.Where(b => b.CreatedAt >= dayStart && b.CreatedAt < dayEnd
+                && b.PaymentStatus == PaymentStatus.Verified).SumAsync(b => (decimal?)b.TotalAmount) ?? 0,
+            PendingPayments = await db.Bookings.CountAsync(b => b.PaymentStatus == PaymentStatus.Pending
+                && b.Status == BookingStatus.Reserved),
+            ReservedHolds = await db.Bookings.CountAsync(b => b.Status == BookingStatus.Reserved),
+            UpcomingTrips = await db.Trips.CountAsync(t => t.Status == TripStatus.Scheduled
+                && t.DepartureTime >= now && t.DepartureTime < soon),
+            SeatsSoldUpcoming = await db.TripSeats.CountAsync(x => x.Status == SeatStatus.Booked
+                && x.Trip.DepartureTime >= now && x.Trip.DepartureTime < soon),
             Routes = await db.Routes.CountAsync(),
             ActiveRoutes = await db.Routes.CountAsync(r => r.IsActive),
             Buses = await db.Buses.CountAsync(),
             Seats = await db.Buses.SumAsync(b => (int?)b.TotalSeats) ?? 0,
-            Locations = await db.Locations.CountAsync(),
-            Terminals = await db.Locations.CountAsync(l => l.Type != LocationType.City),
+            Schedules = await db.ScheduleTemplates.CountAsync(),
+            ActiveSchedules = await db.ScheduleTemplates.CountAsync(s => s.IsActive),
             Staff = await db.Users.CountAsync()
         };
         _loading = false;
     }
 
-    private sealed class DashboardStats
+    private sealed class Stats
     {
+        public int BookingsToday { get; set; }
+        public decimal RevenueToday { get; set; }
+        public int PendingPayments { get; set; }
+        public int ReservedHolds { get; set; }
+        public int UpcomingTrips { get; set; }
+        public int SeatsSoldUpcoming { get; set; }
         public int Routes { get; set; }
         public int ActiveRoutes { get; set; }
         public int Buses { get; set; }
         public int Seats { get; set; }
-        public int Locations { get; set; }
-        public int Terminals { get; set; }
+        public int Schedules { get; set; }
+        public int ActiveSchedules { get; set; }
         public int Staff { get; set; }
     }
 }

@@ -14,7 +14,7 @@
 
         <div class="seatplan__cabin">
             <div class="seatplan__wheel" aria-hidden="true">@Loc["Seat.Front"]</div>
-            <div class="seatplan__grid" style="grid-template-columns: repeat(@Columns, 1fr);">
+            <div class="seatplan__grid" style="grid-template-columns: repeat(@Columns, var(--seat-size));">
                 @for (var row = 0; row < Rows; row++)
                 {
                     var r = row;

@@ -136,8 +136,9 @@
         _minDate = today.ToString("yyyy-MM-dd");
         _maxDate = today.AddDays(windowDays).ToString("yyyy-MM-dd");
 
+        var defaultDay = Clock.ToLocal(Clock.UtcNow).Hour >= 18 ? today.AddDays(1) : today;
         _date = DateOnly.TryParse(Date, out var d) && d >= today && d <= today.AddDays(windowDays)
-            ? d : today;
+            ? d : defaultDay;
 
         _dayOptions = Enumerable.Range(0, Math.Min(windowDays + 1, 7))
             .Select(i => today.AddDays(i))

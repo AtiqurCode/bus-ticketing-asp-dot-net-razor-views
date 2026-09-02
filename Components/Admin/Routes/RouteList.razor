@@ -49,18 +49,18 @@ else
                 @foreach (var r in _rows)
                 {
                     <tr>
-                        <td>
-                            <strong>@r.OriginLocation.Name</strong>
+                        <td data-label="Route">
+                            <span><strong>@r.OriginLocation.Name</strong>
                             <span class="muted"> → </span>
-                            <strong>@r.DestinationLocation.Name</strong>
+                            <strong>@r.DestinationLocation.Name</strong></span>
                         </td>
-                        <td class="num">@r.DistanceKm.ToString("0.#") km</td>
-                        <td class="num">@Format(r.ApproxDurationMinutes)</td>
-                        <td><StatusPill Active="r.IsActive" /></td>
+                        <td class="num" data-label="Distance">@r.DistanceKm.ToString("0.#") km</td>
+                        <td class="num" data-label="Duration">@Format(r.ApproxDurationMinutes)</td>
+                        <td data-label="Status"><StatusPill Active="r.IsActive" /></td>
                         <td class="actions">
                             <div class="row-actions">
-                                <button class="icon-btn" title="Edit" @onclick="() => Edit(r.Id)">✎</button>
-                                <button class="icon-btn icon-btn--danger" title="Delete" @onclick="() => _deleteTarget = r">🗑</button>
+                                <button class="icon-btn" title="Edit" @onclick="() => Edit(r.Id)"><Icon Name="pencil" /></button>
+                                <button class="icon-btn icon-btn--danger" title="Delete" @onclick="() => _deleteTarget = r"><Icon Name="trash" /></button>
                             </div>
                         </td>
                     </tr>

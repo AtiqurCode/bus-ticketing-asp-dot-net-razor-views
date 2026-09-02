@@ -59,21 +59,21 @@ else
                 @foreach (var t in _rows)
                 {
                     <tr>
-                        <td><strong>@t.Name</strong></td>
-                        <td>@t.Route.OriginLocation.Name → @t.Route.DestinationLocation.Name</td>
-                        <td>@t.Bus.Name<div class="muted text-sm">@t.Bus.Operator</div></td>
-                        <td class="text-sm">
-                            @t.StartTime.ToString("HH:mm")–@t.EndTime.ToString("HH:mm")
-                            <span class="muted">every @Humanize(t.IntervalMinutes)</span>
+                        <td data-label="Schedule"><strong>@t.Name</strong></td>
+                        <td data-label="Route">@t.Route.OriginLocation.Name → @t.Route.DestinationLocation.Name</td>
+                        <td data-label="Bus"><span>@t.Bus.Name <span class="muted text-sm">@t.Bus.Operator</span></span></td>
+                        <td class="text-sm" data-label="Departures">
+                            <span>@t.StartTime.ToString("HH:mm")–@t.EndTime.ToString("HH:mm")
+                            <span class="muted">every @Humanize(t.IntervalMinutes)</span></span>
                         </td>
-                        <td class="text-sm">@DaysLabel(t.OperatingDays)</td>
-                        <td class="num">৳@t.Fare.ToString("0")</td>
-                        <td><StatusPill Active="t.IsActive" OnLabel="Running" OffLabel="Paused" /></td>
+                        <td class="text-sm" data-label="Days">@DaysLabel(t.OperatingDays)</td>
+                        <td class="num" data-label="Fare">৳@t.Fare.ToString("0")</td>
+                        <td data-label="Status"><StatusPill Active="t.IsActive" OnLabel="Running" OffLabel="Paused" /></td>
                         <td class="actions">
                             <div class="row-actions">
-                                <button class="icon-btn" title="Edit" @onclick="() => Edit(t.Id)">✎</button>
+                                <button class="icon-btn" title="Edit" @onclick="() => Edit(t.Id)"><Icon Name="pencil" /></button>
                                 <button class="icon-btn" title="@(t.IsActive ? "Pause" : "Resume")"
-                                        @onclick="() => Toggle(t)">@(t.IsActive ? "⏸" : "▶")</button>
+                                        @onclick="() => Toggle(t)"><Icon Name="@(t.IsActive ? "pause" : "play")" /></button>
                             </div>
                         </td>
                     </tr>

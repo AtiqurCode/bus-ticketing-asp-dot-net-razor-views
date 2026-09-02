@@ -41,18 +41,18 @@ else
                 @foreach (var s in _rows)
                 {
                     <tr>
-                        <td><strong>@s.FullName</strong></td>
-                        <td>@s.Username</td>
-                        <td><span class="badge @(s.Role == Roles.SuperAdmin ? "badge--info" : "")">@RoleLabel(s.Role)</span></td>
-                        <td>@(s.CounterName ?? "—")</td>
-                        <td class="muted text-sm">@(s.LastLoginAt is { } t ? t.ToLocalTime().ToString("d MMM, HH:mm") : "never")</td>
-                        <td><StatusPill Active="s.IsActive" /></td>
+                        <td data-label="Name"><strong>@s.FullName</strong></td>
+                        <td data-label="Username">@s.Username</td>
+                        <td data-label="Role"><span class="badge @(s.Role == Roles.SuperAdmin ? "badge--info" : "")">@RoleLabel(s.Role)</span></td>
+                        <td data-label="Counter">@(s.CounterName ?? "—")</td>
+                        <td class="muted text-sm" data-label="Last sign-in">@(s.LastLoginAt is { } t ? t.ToLocalTime().ToString("d MMM, HH:mm") : "never")</td>
+                        <td data-label="Status"><StatusPill Active="s.IsActive" /></td>
                         <td class="actions">
                             <div class="row-actions">
-                                <button class="icon-btn" title="Edit" @onclick="() => Edit(s.Id)">✎</button>
-                                <button class="icon-btn" title="Reset password" @onclick="() => OpenReset(s)">🔑</button>
+                                <button class="icon-btn" title="Edit" @onclick="() => Edit(s.Id)"><Icon Name="pencil" /></button>
+                                <button class="icon-btn" title="Reset password" @onclick="() => OpenReset(s)"><Icon Name="key" /></button>
                                 <button class="icon-btn" title="@(s.IsActive ? "Deactivate" : "Activate")"
-                                        @onclick="() => Toggle(s)">@(s.IsActive ? "⦸" : "⏻")</button>
+                                        @onclick="() => Toggle(s)"><Icon Name="@(s.IsActive ? "x" : "check")" /></button>
                             </div>
                         </td>
                     </tr>

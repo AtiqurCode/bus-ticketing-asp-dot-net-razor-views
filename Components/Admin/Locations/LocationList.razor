@@ -23,14 +23,14 @@
         <option value="@LocationType.Counter">Counters</option>
     </select>
     <span class="toolbar__spacer"></span>
-    <span class="muted text-sm">@_rows.Count shown</span>
+    <span class="muted text-sm">@_page.Total total</span>
 </div>
 
 @if (_loading)
 {
     <div class="loading-block">@Loc["Common.Loading"]</div>
 }
-else if (_rows.Count == 0)
+else if (_page.Items.Count == 0)
 {
     <div class="table-wrap">
         <EmptyState Title="Nothing matches" Message="Try a different search or add a new stop." />
@@ -51,32 +51,32 @@ else
                 </tr>
             </thead>
             <tbody>
-                @foreach (var l in _rows)
+                @foreach (var l in _page.Items)
                 {
                     <tr>
-                        <td>
-                            <strong>@l.Name</strong>
+                        <td data-label="Name">
+                            <span><strong>@l.Name</strong>
                             @if (l.Parent is not null)
                             {
-                                <div class="muted text-sm">in @l.Parent.Name</div>
+                                <span class="muted text-sm"> in @l.Parent.Name</span>
                             }
                             else if (!string.IsNullOrEmpty(l.NameBn))
                             {
-                                <div class="muted text-sm">@l.NameBn</div>
-                            }
+                                <span class="muted text-sm"> @l.NameBn</span>
+                            }</span>
                         </td>
-                        <td>@l.Type</td>
-                        <td>@l.District</td>
-                        <td>@l.Division</td>
-                        <td><StatusPill Active="l.IsActive" /></td>
+                        <td data-label="Type">@l.Type</td>
+                        <td data-label="District">@l.District</td>
+                        <td data-label="Division">@l.Division</td>
+                        <td data-label="Status"><StatusPill Active="l.IsActive" /></td>
                         <td class="actions">
                             <div class="row-actions">
-                                <button class="icon-btn" title="Edit" @onclick="() => Edit(l.Id)">✎</button>
+                                <button class="icon-btn" title="Edit" @onclick="() => Edit(l.Id)"><Icon Name="pencil" /></button>
                                 <button class="icon-btn" title="@(l.IsActive ? "Deactivate" : "Activate")"
-                                        @onclick="() => Toggle(l)">@(l.IsActive ? "⦸" : "⏻")</button>
+                                        @onclick="() => Toggle(l)"><Icon Name="@(l.IsActive ? "x" : "check")" /></button>
                                 @if (l.Type != LocationType.City)
                                 {
-                                    <button class="icon-btn icon-btn--danger" title="Delete" @onclick="() => AskDelete(l)">🗑</button>
+                                    <button class="icon-btn icon-btn--danger" title="Delete" @onclick="() => AskDelete(l)"><Icon Name="trash" /></button>
                                 }
                             </div>
                         </td>
@@ -85,6 +85,15 @@ else
             </tbody>
         </table>
     </div>
+
+    @if (_page.TotalPages > 1)
+    {
+        <div class="pager">
+            <button class="btn btn--ghost btn--sm" disabled="@(_pageNo <= 1)" @onclick="() => GoTo(_pageNo - 1)">Previous</button>
+            <span class="muted text-sm">Page @_pageNo of @_page.TotalPages</span>
+            <button class="btn btn--ghost btn--sm" disabled="@(_pageNo >= _page.TotalPages)" @onclick="() => GoTo(_pageNo + 1)">Next</button>
+        </div>
+    }
 }
 
 <ConfirmDialog Visible="_deleteTarget is not null"
@@ -100,9 +109,10 @@ else
 }
 
 @code {
-    private List<Location> _rows = [];
+    private LocationPage _page = new([], 0, 1, 25);
     private string? _search;
     private LocationType? _type;
+    private int _pageNo = 1;
     private bool _loading = true;
     private Location? _deleteTarget;
     private bool _deleting;
@@ -114,13 +124,20 @@ else
     private async Task Reload()
     {
         _loading = true;
-        _rows = await Locations.ListAsync(_search, _type);
+        _page = await Locations.ListAsync(_search, _type, _pageNo);
         _loading = false;
+    }
+
+    private async Task GoTo(int page)
+    {
+        _pageNo = Math.Clamp(page, 1, Math.Max(_page.TotalPages, 1));
+        await Reload();
     }
 
     private async Task ApplySearch(string? value)
     {
         _search = value;
+        _pageNo = 1;
         _debounce?.Cancel();
         _debounce = new CancellationTokenSource();
         var token = _debounce.Token;
@@ -136,6 +153,7 @@ else
     private async Task OnTypeChange(ChangeEventArgs e)
     {
         _type = Enum.TryParse<LocationType>((string?)e.Value, out var t) ? t : null;
+        _pageNo = 1;
         await Reload();
     }
 
