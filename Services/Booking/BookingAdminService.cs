@@ -1,5 +1,6 @@
 using BusTicketing.Data;
 using BusTicketing.Domain;
+using BusTicketing.Services.Notifications;
 using Microsoft.EntityFrameworkCore;
 
 namespace BusTicketing.Services.Bookings;
@@ -19,12 +20,13 @@ public sealed class BookingAdminService(
     IDbContextFactory<AppDbContext> dbFactory,
     SeatMapBroadcaster broadcaster,
     IAppClock clock,
-    AuditService audit)
+    AuditService audit,
+    SmsService sms)
 {
     public async Task<BookingPage> QueryAsync(
         string? search = null, BookingStatus? status = null, PaymentStatus? paymentStatus = null,
         Guid? routeId = null, DateOnly? serviceDate = null,
-        int page = 1, int pageSize = 30, CancellationToken ct = default)
+        int page = 1, int pageSize = 20, CancellationToken ct = default)
     {
         await using var db = await dbFactory.CreateDbContextAsync(ct);
         var query = db.Bookings.AsNoTracking()
@@ -108,6 +110,10 @@ public sealed class BookingAdminService(
         broadcaster.Notify(booking.TripId);
         await audit.RecordAsync(AuditActions.BookingCancel, nameof(Booking), id.ToString(),
             $"Cancelled {booking.Reference}: {reason.Trim()}", staffId, "");
+
+        await sms.SendAsync(booking.PassengerPhone, TicketMessages.BookingCancelled(booking, reason),
+            SmsPurpose.BookingCancelled, booking.Id, ct);
+
         return OperationResult.Ok();
     }
 }

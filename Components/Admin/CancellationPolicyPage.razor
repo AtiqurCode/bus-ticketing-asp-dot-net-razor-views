@@ -1,0 +1,132 @@
+@page "/staff/cancellation-policy"
+@rendermode InteractiveServer
+@attribute [Authorize(Policy = AuthPolicies.SuperAdmin)]
+@using BusTicketing.Services.Bookings
+@inject CancellationPolicyService Policies
+
+<PageTitle>Cancellation policy</PageTitle>
+
+<PageHeading Title="Cancellation policy"
+             Description="Tiered refunds by how far out the passenger cancels. The first tier a cancellation still clears (by hours before departure) sets the refund." />
+
+@if (_loading)
+{
+    <div class="loading-block">Loading…</div>
+}
+else
+{
+    <div class="card form-card">
+        <div class="card__body stack">
+            <div class="field">
+                <label for="pname">Policy name</label>
+                <input id="pname" class="input" @bind="_name" style="max-width: 320px;" />
+            </div>
+
+            <div class="table-wrap table-scroll">
+                <table class="data">
+                    <thead>
+                        <tr>
+                            <th>Cancel at least (hours before departure)</th>
+                            <th>Refund</th>
+                            <th class="actions"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (var i = 0; i < _rules.Count; i++)
+                        {
+                            var idx = i;
+                            <tr>
+                                <td>
+                                    <input class="input input--tiny" type="number" min="0"
+                                           value="@_rules[idx].Hours" @onchange="e => SetHours(idx, e.Value)" />
+                                </td>
+                                <td>
+                                    <input class="input input--tiny" type="number" min="0" max="100"
+                                           value="@_rules[idx].Percent" @onchange="e => SetPercent(idx, e.Value)" /> %
+                                </td>
+                                <td class="actions">
+                                    <button class="icon-btn icon-btn--danger" title="Remove tier" @onclick="() => Remove(idx)">🗑</button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <button type="button" class="btn btn--ghost btn--sm" @onclick="AddRule">+ Add tier</button>
+
+            <div class="alert" style="background: var(--green-50); border-color: #b7e2d1;">
+                <strong>Preview:</strong> @Preview()
+            </div>
+
+            @if (_error is not null)
+            {
+                <div class="alert alert--error">@_error</div>
+            }
+            @if (_saved)
+            {
+                <div class="alert alert--success">Saved.</div>
+            }
+
+            <div class="form-actions">
+                <button class="btn" @onclick="Save" disabled="@_busy">@(_busy ? "Saving…" : "Save policy")</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private string _name = "";
+    private List<(int Hours, int Percent)> _rules = [];
+    private bool _loading = true;
+    private bool _busy;
+    private bool _saved;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var policy = await Policies.GetDefaultAsync();
+        _name = string.IsNullOrWhiteSpace(policy.Name) ? "Standard" : policy.Name;
+        _rules = policy.Rules.Count > 0
+            ? policy.Rules.OrderByDescending(r => r.MinHoursBeforeDeparture).Select(r => (r.MinHoursBeforeDeparture, r.RefundPercent)).ToList()
+            : [(24, 90), (6, 50), (0, 0)];
+        _loading = false;
+    }
+
+    private void AddRule() => _rules.Add((0, 0));
+
+    private void Remove(int idx) => _rules.RemoveAt(idx);
+
+    private void SetHours(int idx, object? value)
+    {
+        if (int.TryParse(value?.ToString(), out var h))
+            _rules[idx] = (h, _rules[idx].Percent);
+    }
+
+    private void SetPercent(int idx, object? value)
+    {
+        if (int.TryParse(value?.ToString(), out var p))
+            _rules[idx] = (_rules[idx].Hours, p);
+    }
+
+    private string Preview()
+    {
+        var ordered = _rules.OrderByDescending(r => r.Hours).ToList();
+        if (ordered.Count == 0) return "No tiers configured.";
+        var parts = ordered.Select((r, i) =>
+            i + 1 < ordered.Count ? $"{r.Hours}h+ → {r.Percent}%" : $"otherwise → {r.Percent}%");
+        return string.Join("  ·  ", parts);
+    }
+
+    private async Task Save()
+    {
+        _error = null;
+        _saved = false;
+        _busy = true;
+        var result = await Policies.SaveDefaultAsync(_name,
+            _rules.Select(r => new CancellationRuleInput(r.Hours, r.Percent)).ToList());
+        _busy = false;
+        if (result.Succeeded) _saved = true;
+        else _error = result.Error;
+    }
+}

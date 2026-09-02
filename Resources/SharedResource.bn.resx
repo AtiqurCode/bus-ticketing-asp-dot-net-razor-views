@@ -121,6 +121,8 @@
   <data name="Admin.Nav.Settings" xml:space="preserve"><value>সেটিংস</value></data>
   <data name="Admin.Nav.AuditLog" xml:space="preserve"><value>অডিট লগ</value></data>
   <data name="Admin.Nav.Sell" xml:space="preserve"><value>টিকিট বিক্রি</value></data>
+  <data name="Admin.Nav.Scan" xml:space="preserve"><value>টিকিট স্ক্যান</value></data>
+  <data name="Admin.Nav.CancellationPolicy" xml:space="preserve"><value>বাতিল নীতি</value></data>
   <data name="Admin.Dashboard.Welcome" xml:space="preserve"><value>স্বাগতম</value></data>
   <data name="Admin.Dashboard.Placeholder" xml:space="preserve"><value>বুকিং শুরু হলে ড্যাশবোর্ডের উইজেটগুলো এখানে আসবে।</value></data>
 
@@ -190,6 +192,7 @@
   <data name="Confirm.PaymentStatus" xml:space="preserve"><value>পেমেন্ট অবস্থা</value></data>
   <data name="Confirm.HeldUntil" xml:space="preserve"><value>ধরে রাখা হবে</value></data>
   <data name="Confirm.ViewMyTickets" xml:space="preserve"><value>আমার টিকিট দেখুন</value></data>
+  <data name="Confirm.DownloadPdf" xml:space="preserve"><value>PDF টিকিট ডাউনলোড</value></data>
   <data name="Confirm.Pay.Pending" xml:space="preserve"><value>যাচাইয়ের অপেক্ষায়</value></data>
   <data name="Confirm.Pay.Verified" xml:space="preserve"><value>পরিশোধিত</value></data>
   <data name="Confirm.Pay.Rejected" xml:space="preserve"><value>যাচাই হয়নি</value></data>
@@ -211,4 +214,17 @@
   <data name="Confirm.Resubmit.Reason" xml:space="preserve"><value>কারণ</value></data>
   <data name="Confirm.Resubmit.Submit" xml:space="preserve"><value>আবার জমা দিন</value></data>
   <data name="Confirm.Resubmit.Done" xml:space="preserve"><value>ধন্যবাদ — আমরা নতুন তথ্য যাচাই করব।</value></data>
+
+  <data name="MyTickets.Intro" xml:space="preserve"><value>যে ফোন নম্বর দিয়ে বুক করেছেন তা দিন — সব আসন্ন ও অতীত যাত্রা দেখুন, টিকিট ডাউনলোড করুন, অথবা নীতি অনুযায়ী বাতিল করুন।</value></data>
+  <data name="MyTickets.Empty.Title" xml:space="preserve"><value>কোনো বুকিং পাওয়া যায়নি</value></data>
+  <data name="MyTickets.Empty.Body" xml:space="preserve"><value>নম্বরটি যাচাই করুন — যেটি দিয়ে বুক করেছিলেন সেটিই দিন।</value></data>
+  <data name="MyTickets.Upcoming" xml:space="preserve"><value>আসন্ন</value></data>
+  <data name="MyTickets.Past" xml:space="preserve"><value>অতীত</value></data>
+  <data name="MyTickets.ViewTicket" xml:space="preserve"><value>টিকিট দেখুন</value></data>
+  <data name="MyTickets.Cancel" xml:space="preserve"><value>বাতিল</value></data>
+  <data name="MyTickets.Cancel.Title" xml:space="preserve"><value>এই বুকিং বাতিল করবেন?</value></data>
+  <data name="MyTickets.Cancel.RefundLine" xml:space="preserve"><value>যাত্রার কত কাছাকাছি তার উপর ভিত্তি করে আপনি ফেরত পাবেন {0}% — ৳{1}।</value></data>
+  <data name="MyTickets.Cancel.Keep" xml:space="preserve"><value>বুকিং রাখুন</value></data>
+  <data name="MyTickets.Cancel.Confirm" xml:space="preserve"><value>বুকিং বাতিল করুন</value></data>
+  <data name="MyTickets.Cancel.Done" xml:space="preserve"><value>বাতিল করা হয়েছে।</value></data>
 </root>

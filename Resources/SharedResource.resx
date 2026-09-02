@@ -121,6 +121,8 @@
   <data name="Admin.Nav.Settings" xml:space="preserve"><value>Settings</value></data>
   <data name="Admin.Nav.AuditLog" xml:space="preserve"><value>Audit log</value></data>
   <data name="Admin.Nav.Sell" xml:space="preserve"><value>Sell a ticket</value></data>
+  <data name="Admin.Nav.Scan" xml:space="preserve"><value>Scan ticket</value></data>
+  <data name="Admin.Nav.CancellationPolicy" xml:space="preserve"><value>Cancellation policy</value></data>
   <data name="Admin.Dashboard.Welcome" xml:space="preserve"><value>Welcome back</value></data>
   <data name="Admin.Dashboard.Placeholder" xml:space="preserve"><value>Dashboard widgets arrive once bookings start flowing.</value></data>
 
@@ -190,6 +192,7 @@
   <data name="Confirm.PaymentStatus" xml:space="preserve"><value>Payment status</value></data>
   <data name="Confirm.HeldUntil" xml:space="preserve"><value>Held until</value></data>
   <data name="Confirm.ViewMyTickets" xml:space="preserve"><value>View my tickets</value></data>
+  <data name="Confirm.DownloadPdf" xml:space="preserve"><value>Download PDF ticket</value></data>
   <data name="Confirm.Pay.Pending" xml:space="preserve"><value>Awaiting verification</value></data>
   <data name="Confirm.Pay.Verified" xml:space="preserve"><value>Paid</value></data>
   <data name="Confirm.Pay.Rejected" xml:space="preserve"><value>Not verified</value></data>
@@ -211,4 +214,17 @@
   <data name="Confirm.Resubmit.Reason" xml:space="preserve"><value>Reason</value></data>
   <data name="Confirm.Resubmit.Submit" xml:space="preserve"><value>Resubmit</value></data>
   <data name="Confirm.Resubmit.Done" xml:space="preserve"><value>Thanks — we'll verify the new details.</value></data>
+
+  <data name="MyTickets.Intro" xml:space="preserve"><value>Enter the phone number you booked with to see every upcoming and past trip, download tickets, or cancel where the policy allows.</value></data>
+  <data name="MyTickets.Empty.Title" xml:space="preserve"><value>No bookings found</value></data>
+  <data name="MyTickets.Empty.Body" xml:space="preserve"><value>Check the number, or make sure it's the one you booked with.</value></data>
+  <data name="MyTickets.Upcoming" xml:space="preserve"><value>Upcoming</value></data>
+  <data name="MyTickets.Past" xml:space="preserve"><value>Past</value></data>
+  <data name="MyTickets.ViewTicket" xml:space="preserve"><value>View ticket</value></data>
+  <data name="MyTickets.Cancel" xml:space="preserve"><value>Cancel</value></data>
+  <data name="MyTickets.Cancel.Title" xml:space="preserve"><value>Cancel this booking?</value></data>
+  <data name="MyTickets.Cancel.RefundLine" xml:space="preserve"><value>Based on how close it is to departure, you'll get back {0}% — ৳{1}.</value></data>
+  <data name="MyTickets.Cancel.Keep" xml:space="preserve"><value>Keep booking</value></data>
+  <data name="MyTickets.Cancel.Confirm" xml:space="preserve"><value>Cancel booking</value></data>
+  <data name="MyTickets.Cancel.Done" xml:space="preserve"><value>has been cancelled.</value></data>
 </root>

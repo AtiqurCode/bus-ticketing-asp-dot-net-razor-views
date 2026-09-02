@@ -3,6 +3,7 @@ using System;
 using BusTicketing.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace BusTicketing.Data.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260901155827_SmsLogAndCancellation")]
+    partial class SmsLogAndCancellation
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1320,7 +1323,7 @@ namespace BusTicketing.Data.Migrations
 
                             b1.HasKey("BusId");
 
-                            b1.ToTable("buses", (string)null);
+                            b1.ToTable("buses");
 
                             b1
                                 .ToJson("seat_map")
@@ -1353,7 +1356,7 @@ namespace BusTicketing.Data.Migrations
                                     b2.HasKey("SeatMapBusId", "__synthesizedOrdinal")
                                         .HasName("pk_buses");
 
-                                    b2.ToTable("buses", (string)null);
+                                    b2.ToTable("buses");
 
                                     b2.WithOwner()
                                         .HasForeignKey("SeatMapBusId")

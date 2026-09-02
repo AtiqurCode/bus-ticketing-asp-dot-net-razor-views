@@ -1,5 +1,6 @@
 using BusTicketing.Data;
 using BusTicketing.Domain;
+using BusTicketing.Services.Notifications;
 using Microsoft.EntityFrameworkCore;
 
 namespace BusTicketing.Services.Bookings;
@@ -26,7 +27,9 @@ public sealed record PaymentReviewRow(
 public sealed class PaymentReviewService(
     IDbContextFactory<AppDbContext> dbFactory,
     IAppClock clock,
-    AuditService audit)
+    SettingsService settings,
+    AuditService audit,
+    SmsService sms)
 {
     public async Task<List<PaymentReviewRow>> QueryAsync(
         PaymentStatus? status = PaymentStatus.Pending, string? search = null,
@@ -80,7 +83,10 @@ public sealed class PaymentReviewService(
     public async Task<OperationResult> VerifyAsync(Guid bookingId, Guid staffId, CancellationToken ct = default)
     {
         await using var db = await dbFactory.CreateDbContextAsync(ct);
-        var booking = await db.Bookings.Include(b => b.Payment).FirstOrDefaultAsync(b => b.Id == bookingId, ct);
+        var booking = await db.Bookings.Include(b => b.Payment)
+            .Include(b => b.Trip).ThenInclude(t => t.Route).ThenInclude(r => r.OriginLocation)
+            .Include(b => b.Trip).ThenInclude(t => t.Route).ThenInclude(r => r.DestinationLocation)
+            .FirstOrDefaultAsync(b => b.Id == bookingId, ct);
         if (booking is null)
             return OperationResult.Fail("Booking not found.");
         if (booking.Status is BookingStatus.Cancelled or BookingStatus.Expired)
@@ -102,6 +108,11 @@ public sealed class PaymentReviewService(
         await db.SaveChangesAsync(ct);
         await audit.RecordAsync(AuditActions.PaymentVerify, nameof(Booking), booking.Id.ToString(),
             $"Verified payment for {booking.Reference} (৳{booking.TotalAmount:0})", staffId, "");
+
+        var link = TicketMessages.BuildLink(settings.Current.PublicBaseUrl, booking.Reference);
+        await sms.SendAsync(booking.PassengerPhone, TicketMessages.PaymentConfirmed(booking, booking.Trip, clock, link),
+            SmsPurpose.PaymentVerified, booking.Id, ct);
+
         return OperationResult.Ok();
     }
 
@@ -129,6 +140,10 @@ public sealed class PaymentReviewService(
         await db.SaveChangesAsync(ct);
         await audit.RecordAsync(AuditActions.PaymentReject, nameof(Booking), booking.Id.ToString(),
             $"Rejected payment for {booking.Reference}: {note.Trim()}", staffId, "");
+
+        await sms.SendAsync(booking.PassengerPhone, TicketMessages.PaymentRejected(booking, note),
+            SmsPurpose.PaymentRejected, booking.Id, ct);
+
         return OperationResult.Ok();
     }
 
@@ -137,7 +152,10 @@ public sealed class PaymentReviewService(
         Guid bookingId, Guid staffId, MfsProvider provider, string? transactionId, CancellationToken ct = default)
     {
         await using var db = await dbFactory.CreateDbContextAsync(ct);
-        var booking = await db.Bookings.Include(b => b.Payment).FirstOrDefaultAsync(b => b.Id == bookingId, ct);
+        var booking = await db.Bookings.Include(b => b.Payment)
+            .Include(b => b.Trip).ThenInclude(t => t.Route).ThenInclude(r => r.OriginLocation)
+            .Include(b => b.Trip).ThenInclude(t => t.Route).ThenInclude(r => r.DestinationLocation)
+            .FirstOrDefaultAsync(b => b.Id == bookingId, ct);
         if (booking is null)
             return OperationResult.Fail("Booking not found.");
         if (booking.Status is BookingStatus.Cancelled or BookingStatus.Expired)
@@ -166,6 +184,11 @@ public sealed class PaymentReviewService(
         await db.SaveChangesAsync(ct);
         await audit.RecordAsync(AuditActions.PaymentVerify, nameof(Booking), booking.Id.ToString(),
             $"Counter payment taken for {booking.Reference} ({provider}, ৳{booking.TotalAmount:0})", staffId, "");
+
+        var link = TicketMessages.BuildLink(settings.Current.PublicBaseUrl, booking.Reference);
+        await sms.SendAsync(booking.PassengerPhone, TicketMessages.PaymentConfirmed(booking, booking.Trip, clock, link),
+            SmsPurpose.PaymentVerified, booking.Id, ct);
+
         return OperationResult.Ok();
     }
 

@@ -39,6 +39,11 @@ else
                         <label for="prefix">Ticket reference prefix</label>
                         <InputText id="prefix" class="input" @bind-Value="_model.BookingReferencePrefix" maxlength="6" />
                     </div>
+                    <div class="field col-span-2">
+                        <label for="baseurl">Public site URL</label>
+                        <InputText id="baseurl" class="input" @bind-Value="_model.PublicBaseUrl" placeholder="https://ticketbari.example" />
+                        <span class="muted text-sm">Used to build the ticket link sent by SMS. Leave blank until the domain is live.</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -174,7 +179,8 @@ else
             CurrencyCode = s.CurrencyCode,
             BookingReferencePrefix = s.BookingReferencePrefix,
             SiteName = s.SiteName,
-            SupportPhone = s.SupportPhone
+            SupportPhone = s.SupportPhone,
+            PublicBaseUrl = s.PublicBaseUrl
         };
 
         public AppSettings ToEntity() => new()
@@ -190,7 +196,8 @@ else
             CurrencyCode = CurrencyCode.Trim().ToUpperInvariant(),
             BookingReferencePrefix = BookingReferencePrefix.Trim().ToUpperInvariant(),
             SiteName = SiteName.Trim(),
-            SupportPhone = SupportPhone.Trim()
+            SupportPhone = SupportPhone.Trim(),
+            PublicBaseUrl = string.IsNullOrWhiteSpace(PublicBaseUrl) ? null : PublicBaseUrl.Trim().TrimEnd('/')
         };
     }
 }

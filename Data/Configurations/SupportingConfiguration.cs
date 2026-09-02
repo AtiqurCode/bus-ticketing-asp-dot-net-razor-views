@@ -52,8 +52,23 @@ public class AppSettingsConfiguration : IEntityTypeConfiguration<AppSettings>
         builder.Property(s => s.BookingReferencePrefix).HasMaxLength(6);
         builder.Property(s => s.SiteName).HasMaxLength(80);
         builder.Property(s => s.SupportPhone).HasMaxLength(20);
+        builder.Property(s => s.PublicBaseUrl).HasMaxLength(200);
 
         builder.ToTable(t => t.HasCheckConstraint("ck_app_settings_singleton", "id = 1"));
+    }
+}
+
+public class SmsLogConfiguration : IEntityTypeConfiguration<SmsLog>
+{
+    public void Configure(EntityTypeBuilder<SmsLog> builder)
+    {
+        builder.Property(l => l.ToPhone).HasMaxLength(20).IsRequired();
+        builder.Property(l => l.Message).HasMaxLength(640).IsRequired();
+        builder.Property(l => l.Purpose).HasMaxLength(40).IsRequired();
+        builder.Property(l => l.ProviderResponse).HasMaxLength(400);
+
+        builder.HasIndex(l => l.CreatedAt);
+        builder.HasIndex(l => l.BookingId);
     }
 }
 

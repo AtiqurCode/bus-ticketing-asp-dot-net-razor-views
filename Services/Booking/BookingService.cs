@@ -1,8 +1,11 @@
 using BusTicketing.Data;
 using BusTicketing.Domain;
+using BusTicketing.Services.Notifications;
 using Microsoft.EntityFrameworkCore;
 
 namespace BusTicketing.Services.Bookings;
+
+public sealed record RefundPreview(bool CanCancel, string? BlockReason, double HoursBeforeDeparture, int RefundPercent, decimal RefundAmount);
 
 public sealed class BookingService(
     IDbContextFactory<AppDbContext> dbFactory,
@@ -10,6 +13,8 @@ public sealed class BookingService(
     IAppClock clock,
     SeatMapBroadcaster broadcaster,
     AuditService audit,
+    SmsService sms,
+    CancellationPolicyService cancellationPolicies,
     ILogger<BookingService> logger)
 {
     public async Task<OperationResult<string>> CreateAsync(BookingRequest request, CancellationToken ct = default)
@@ -24,7 +29,10 @@ public sealed class BookingService(
 
         await using var db = await dbFactory.CreateDbContextAsync(ct);
 
-        var trip = await db.Trips.FirstOrDefaultAsync(t => t.Id == request.TripId, ct);
+        var trip = await db.Trips
+            .Include(t => t.Route).ThenInclude(r => r.OriginLocation)
+            .Include(t => t.Route).ThenInclude(r => r.DestinationLocation)
+            .FirstOrDefaultAsync(t => t.Id == request.TripId, ct);
         if (trip is null || trip.Status != TripStatus.Scheduled)
             return OperationResult<string>.Fail("This trip is no longer open for booking.");
         if (trip.DepartureTime <= now)
@@ -111,6 +119,8 @@ public sealed class BookingService(
                 + (request.BookedByStaffId is not null ? " (counter sale)" : ""),
             request.BookedByStaffId, request.BookedByStaffId is not null ? "counter" : "customer", ct: ct);
 
+        await SendConfirmationSmsAsync(booking, trip, paidNow, ct);
+
         return OperationResult<string>.Ok(booking.Reference);
     }
 
@@ -144,6 +154,82 @@ public sealed class BookingService(
             .Where(b => b.PassengerPhone == normalized)
             .OrderByDescending(b => b.Trip.DepartureTime)
             .ToListAsync(ct);
+    }
+
+    /// <summary>What the passenger would get back if they cancelled right now.</summary>
+    public async Task<RefundPreview> PreviewCancellationAsync(Guid bookingId, CancellationToken ct = default)
+    {
+        await using var db = await dbFactory.CreateDbContextAsync(ct);
+        var booking = await db.Bookings.AsNoTracking()
+            .Include(b => b.Trip)
+            .FirstOrDefaultAsync(b => b.Id == bookingId, ct);
+
+        if (booking is null)
+            return new RefundPreview(false, "Booking not found.", 0, 0, 0);
+        if (booking.Status is BookingStatus.Cancelled or BookingStatus.Expired)
+            return new RefundPreview(false, "This booking is already closed.", 0, 0, 0);
+
+        var hours = (booking.Trip.DepartureTime - clock.UtcNow).TotalHours;
+        if (hours <= 0)
+            return new RefundPreview(false, "This trip has already departed.", 0, 0, 0);
+
+        var policy = await cancellationPolicies.GetDefaultAsync(ct);
+        var percent = policy.RefundPercentFor(hours);
+        var amount = Math.Round(booking.TotalAmount * percent / 100m, 0);
+        return new RefundPreview(true, null, hours, percent, amount);
+    }
+
+    /// <summary>Self-service cancellation — the phone number is the passenger's only credential.</summary>
+    public async Task<OperationResult> CancelByCustomerAsync(
+        Guid bookingId, string phone, string? reason, CancellationToken ct = default)
+    {
+        var normalized = PhoneNumber.Normalize(phone);
+        if (normalized is null)
+            return OperationResult.Fail("That doesn't look like a valid mobile number.");
+
+        await using var db = await dbFactory.CreateDbContextAsync(ct);
+        var booking = await db.Bookings
+            .Include(b => b.Trip).ThenInclude(t => t.Route).ThenInclude(r => r.OriginLocation)
+            .Include(b => b.Trip).ThenInclude(t => t.Route).ThenInclude(r => r.DestinationLocation)
+            .FirstOrDefaultAsync(b => b.Id == bookingId, ct);
+
+        if (booking is null || booking.PassengerPhone != normalized)
+            return OperationResult.Fail("Booking not found.");
+        if (booking.Status is BookingStatus.Cancelled or BookingStatus.Expired)
+            return OperationResult.Fail("This booking is already closed.");
+
+        var hours = (booking.Trip.DepartureTime - clock.UtcNow).TotalHours;
+        if (hours <= 0)
+            return OperationResult.Fail("This trip has already departed.");
+
+        var policy = await cancellationPolicies.GetDefaultAsync(ct);
+        var percent = policy.RefundPercentFor(hours);
+        var amount = Math.Round(booking.TotalAmount * percent / 100m, 0);
+
+        var now = clock.UtcNow;
+        booking.Status = BookingStatus.Cancelled;
+        booking.CancelledAt = now;
+        booking.CancellationReason = string.IsNullOrWhiteSpace(reason) ? "Cancelled by passenger" : reason.Trim();
+        booking.RefundAmount = amount;
+
+        await db.TripSeats.Where(s => s.BookingId == bookingId)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(x => x.Status, SeatStatus.Available)
+                .SetProperty(x => x.BookingId, (Guid?)null)
+                .SetProperty(x => x.HoldToken, (Guid?)null)
+                .SetProperty(x => x.HoldExpiresAt, (DateTimeOffset?)null), ct);
+
+        await db.SaveChangesAsync(ct);
+        broadcaster.Notify(booking.TripId);
+        await audit.RecordAsync(AuditActions.BookingCancel, nameof(Booking), booking.Id.ToString(),
+            $"Self-service cancel {booking.Reference} — {percent}% refund (৳{amount:0})",
+            actorId: null, actorName: "customer", ct: ct);
+
+        await sms.SendAsync(booking.PassengerPhone,
+            TicketMessages.BookingCancelled(booking, $"refund ৳{amount:0} ({percent}%) will be arranged"),
+            SmsPurpose.BookingCancelled, booking.Id, ct);
+
+        return OperationResult.Ok();
     }
 
     public async Task<OperationResult> ResubmitPaymentAsync(
@@ -181,6 +267,16 @@ public sealed class BookingService(
         await audit.RecordAsync(AuditActions.BookingCreate, nameof(Payment), booking.Id.ToString(),
             $"Transaction ID resubmitted for {booking.Reference}", actorId: null, actorName: "customer", ct: ct);
         return OperationResult.Ok();
+    }
+
+    private Task SendConfirmationSmsAsync(Booking booking, Trip trip, bool paidNow, CancellationToken ct)
+    {
+        var link = TicketMessages.BuildLink(settings.Current.PublicBaseUrl, booking.Reference);
+        var message = paidNow
+            ? TicketMessages.PaymentConfirmed(booking, trip, clock, link)
+            : TicketMessages.BookingReceived(booking, trip, clock, link);
+        var purpose = paidNow ? SmsPurpose.PaymentVerified : SmsPurpose.BookingCreated;
+        return sms.SendAsync(booking.PassengerPhone, message, purpose, booking.Id, ct);
     }
 
     /// <summary>Reserved bookings whose payment window lapsed — release the seats.</summary>

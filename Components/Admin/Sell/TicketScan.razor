@@ -1,0 +1,121 @@
+@page "/staff/scan"
+@rendermode RenderModes.ServerNoPrerender
+@using BusTicketing.Services.Bookings
+@inject BookingService Bookings
+@inject IAppClock Clock
+
+<PageTitle>Scan ticket</PageTitle>
+
+<PageHeading Title="Scan ticket" Description="Scan the passenger's QR code (or type the reference) to check them in at the door." />
+
+<div class="card form-card">
+    <div class="card__body">
+        <div class="field">
+            <label for="scan">Reference or QR value</label>
+            <input id="scan" class="input" autofocus autocomplete="off"
+                   value="@_input" @oninput="e => _input = (string?)e.Value ?? string.Empty"
+                   @onkeydown="OnKeyDown" placeholder="BT-XXXXXX" />
+            <span class="muted text-sm">A USB/Bluetooth scanner types this automatically and presses Enter.</span>
+        </div>
+        <button class="btn" style="margin-top: var(--space-3);" @onclick="Lookup" disabled="@_busy">Check</button>
+    </div>
+</div>
+
+@if (_checked)
+{
+    <div class="scanresult scanresult--@(Kind()) card" style="margin-top: var(--space-5);">
+        <div class="card__body">
+            @if (_booking is null)
+            {
+                <h2>Not found</h2>
+                <p class="muted">No booking matches “@_lastQuery”.</p>
+            }
+            else
+            {
+                var b = _booking;
+                <div class="scanresult__head">
+                    <span class="scanresult__icon" aria-hidden="true"><Icon Name="@IconName()" Size="24" /></span>
+                    <div>
+                        <h2>@Verdict()</h2>
+                        <p class="muted">@b.Reference</p>
+                    </div>
+                </div>
+                <div class="detail-grid" style="margin-top: var(--space-4);">
+                    <div>
+                        <div class="kv"><span>Passenger</span><span><strong>@b.PassengerName</strong></span></div>
+                        <div class="kv"><span>Phone</span><span>@b.PassengerPhone</span></div>
+                        <div class="kv"><span>Seats</span><span><strong>@b.SeatSummary</strong></span></div>
+                    </div>
+                    <div>
+                        <div class="kv"><span>Route</span><span>@b.Trip.Route.OriginLocation.Name → @b.Trip.Route.DestinationLocation.Name</span></div>
+                        <div class="kv"><span>Departure</span><span>@Clock.ToLocal(b.Trip.DepartureTime).ToString("ddd d MMM, HH:mm")</span></div>
+                        <div class="kv"><span>Booking status</span><span class="badge @StatusBadge()">@b.Status</span></div>
+                        <div class="kv"><span>Payment</span><span class="badge @PayBadge()">@b.PaymentStatus</span></div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    private string _input = "";
+    private string _lastQuery = "";
+    private bool _busy;
+    private bool _checked;
+    private Booking? _booking;
+
+    private async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await Lookup();
+    }
+
+    private async Task Lookup()
+    {
+        var raw = _input.Trim();
+        if (raw.Length == 0) return;
+
+        // A scanned QR payload is a full URL — pull the reference off the end.
+        var reference = raw.Contains('/') ? raw[(raw.LastIndexOf('/') + 1)..] : raw;
+
+        _busy = true;
+        _lastQuery = reference;
+        _booking = await Bookings.GetByReferenceAsync(reference);
+        _checked = true;
+        _busy = false;
+        _input = "";
+    }
+
+    private string Kind()
+    {
+        if (_booking is null) return "unknown";
+        if (_booking.Status == BookingStatus.Confirmed) return "ok";
+        if (_booking.Status is BookingStatus.Cancelled or BookingStatus.Expired) return "bad";
+        return "wait";
+    }
+
+    private string IconName() => Kind() switch { "ok" => "check", "bad" => "x", _ => "clock" };
+
+    private string Verdict() => _booking!.Status switch
+    {
+        BookingStatus.Confirmed => "Valid — let them board",
+        BookingStatus.Reserved => "Not paid yet — do not board",
+        BookingStatus.Cancelled => "Cancelled — do not board",
+        BookingStatus.Expired => "Expired — do not board",
+        _ => _booking.Status.ToString()
+    };
+
+    private string StatusBadge() => _booking!.Status switch
+    {
+        BookingStatus.Confirmed => "badge--success",
+        BookingStatus.Cancelled or BookingStatus.Expired => "badge--danger",
+        _ => "badge--warning"
+    };
+
+    private string PayBadge() => _booking!.PaymentStatus switch
+    {
+        PaymentStatus.Verified => "badge--success",
+        PaymentStatus.Rejected => "badge--danger",
+        _ => "badge--warning"
+    };
+}

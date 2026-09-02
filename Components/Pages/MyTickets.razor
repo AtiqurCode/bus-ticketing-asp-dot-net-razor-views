@@ -1,24 +1,225 @@
 @page "/my-tickets"
+@rendermode RenderModes.ServerNoPrerender
+@using BusTicketing.Services.Bookings
+@inject BookingService Bookings
+@inject IAppClock Clock
 @inject IStringLocalizer<SharedResource> Loc
 
 <PageTitle>@Loc["Nav.MyTickets"]</PageTitle>
 
 <div class="container page stack">
-    <h1>@Loc["Nav.MyTickets"]</h1>
-    <p class="muted" style="max-width: 52ch;">
-        Enter the phone number you booked with to pull up every upcoming and past trip,
-        re-download tickets, or cancel where the policy allows.
-    </p>
+    <div>
+        <h1>@Loc["Nav.MyTickets"]</h1>
+        <p class="muted" style="max-width: 52ch;">@Loc["MyTickets.Intro"]</p>
+    </div>
 
     <div class="card" style="max-width: 460px;">
         <div class="card__body stack">
             <div class="field">
-                <label for="phone">Phone number</label>
-                <input id="phone" class="input" type="tel" inputmode="numeric"
-                       placeholder="01XXXXXXXXX" disabled />
+                <label for="phone">@Loc["Book.Phone"]</label>
+                <input id="phone" class="input" type="tel" inputmode="numeric" placeholder="01XXXXXXXXX"
+                       value="@_phone" @onchange="OnPhoneChange" @onkeydown="OnKeyDown" />
             </div>
-            <button class="btn" disabled>@Loc["Common.Search"]</button>
-            <p class="text-sm muted">Ticket lookup opens once booking goes live.</p>
+            <button class="btn" @onclick="Lookup" disabled="@_busy">@(_busy ? Loc["Common.Loading"] : Loc["Common.Search"])</button>
+            @if (_error is not null)
+            {
+                <div class="alert alert--error">@_error</div>
+            }
         </div>
     </div>
+
+    @if (_flash is not null)
+    {
+        <div class="alert alert--success">@_flash</div>
+    }
+
+    @if (_searched)
+    {
+        @if (_upcoming.Count == 0 && _past.Count == 0)
+        {
+            <div class="card"><div class="card__body centered" style="min-height: 20vh;">
+                <div class="centered__inner">
+                    <h3>@Loc["MyTickets.Empty.Title"]</h3>
+                    <p class="muted">@Loc["MyTickets.Empty.Body"]</p>
+                </div>
+            </div></div>
+        }
+        else
+        {
+            @if (_upcoming.Count > 0)
+            {
+                <h2>@Loc["MyTickets.Upcoming"]</h2>
+                <div class="tickets">
+                    @foreach (var b in _upcoming)
+                    {
+                        @TicketCard(b, true)
+                    }
+                </div>
+            }
+            @if (_past.Count > 0)
+            {
+                <h2>@Loc["MyTickets.Past"]</h2>
+                <div class="tickets">
+                    @foreach (var b in _past)
+                    {
+                        @TicketCard(b, false)
+                    }
+                </div>
+            }
+        }
+    }
 </div>
+
+@if (_cancelTarget is not null)
+{
+    <div class="modal-backdrop" @onclick="() => _cancelTarget = null">
+        <div class="modal" @onclick:stopPropagation role="dialog" aria-modal="true">
+            <h3>@Loc["MyTickets.Cancel.Title"]</h3>
+            @if (_preview is null)
+            {
+                <p class="muted">@Loc["Common.Loading"]</p>
+            }
+            else if (!_preview.CanCancel)
+            {
+                <div class="alert alert--error">@_preview.BlockReason</div>
+            }
+            else
+            {
+                <p>
+                    @string.Format(Loc["MyTickets.Cancel.RefundLine"], _preview.RefundPercent, _preview.RefundAmount.ToString("0"))
+                </p>
+                @if (_cancelError is not null)
+                {
+                    <div class="alert alert--error">@_cancelError</div>
+                }
+            }
+            <div class="modal__actions">
+                <button class="btn btn--ghost" @onclick="() => _cancelTarget = null">@Loc["MyTickets.Cancel.Keep"]</button>
+                @if (_preview?.CanCancel == true)
+                {
+                    <button class="btn btn--danger" @onclick="ConfirmCancel" disabled="@_busy">@Loc["MyTickets.Cancel.Confirm"]</button>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [SupplyParameterFromQuery] private string? Phone { get; set; }
+
+    private string _phone = "";
+    private bool _busy;
+    private bool _searched;
+    private string? _error;
+    private string? _flash;
+    private List<Booking> _upcoming = [];
+    private List<Booking> _past = [];
+
+    private Booking? _cancelTarget;
+    private RefundPreview? _preview;
+    private string? _cancelError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!string.IsNullOrWhiteSpace(Phone))
+        {
+            _phone = Phone;
+            await Lookup();
+        }
+    }
+
+    private void OnPhoneChange(ChangeEventArgs e) => _phone = (string?)e.Value ?? string.Empty;
+
+    private async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await Lookup();
+    }
+
+    private async Task Lookup()
+    {
+        _error = null;
+        _flash = null;
+        if (PhoneNumber.Normalize(_phone) is null)
+        {
+            _error = "Enter a valid Bangladeshi mobile number.";
+            return;
+        }
+
+        _busy = true;
+        var all = await Bookings.HistoryByPhoneAsync(_phone);
+        var now = Clock.UtcNow;
+        _upcoming = all.Where(b => b.Trip.DepartureTime >= now).OrderBy(b => b.Trip.DepartureTime).ToList();
+        _past = all.Where(b => b.Trip.DepartureTime < now).OrderByDescending(b => b.Trip.DepartureTime).ToList();
+        _searched = true;
+        _busy = false;
+    }
+
+    private async Task OpenCancel(Booking b)
+    {
+        _cancelTarget = b;
+        _preview = null;
+        _cancelError = null;
+        _preview = await Bookings.PreviewCancellationAsync(b.Id);
+    }
+
+    private async Task ConfirmCancel()
+    {
+        if (_cancelTarget is null) return;
+        _busy = true;
+        _cancelError = null;
+        var result = await Bookings.CancelByCustomerAsync(_cancelTarget.Id, _phone, "Cancelled by passenger");
+        _busy = false;
+        if (result.Succeeded)
+        {
+            var reference = _cancelTarget.Reference;
+            _cancelTarget = null;
+            await Lookup();
+            _flash = $"{reference} " + Loc["MyTickets.Cancel.Done"];
+        }
+        else
+        {
+            _cancelError = result.Error;
+        }
+    }
+
+    private static bool IsCancellable(Booking b, DateTimeOffset now) =>
+        b.Status is BookingStatus.Reserved or BookingStatus.Confirmed && b.Trip.DepartureTime > now;
+
+    private RenderFragment TicketCard(Booking b, bool upcoming) => @<article class="ticketcard card">
+    <div class="card__body ticketcard__grid">
+        <div>
+            <div class="ticketcard__route">@b.Trip.Route.OriginLocation.Name → @b.Trip.Route.DestinationLocation.Name</div>
+            <div class="muted text-sm">@Clock.ToLocal(b.Trip.DepartureTime).ToString("ddd d MMM yyyy, HH:mm") · @b.Trip.Bus.Operator</div>
+            <div class="text-sm">@Loc["Book.Seats"] <strong>@b.SeatSummary</strong> · ৳@b.TotalAmount.ToString("0")</div>
+        </div>
+        <div class="ticketcard__status">
+            <span class="badge @StatusBadge(b.Status)">@b.Status</span>
+            <span class="badge @PayBadge(b.PaymentStatus)">@b.PaymentStatus</span>
+        </div>
+        <div class="ticketcard__actions">
+            <a class="btn btn--ghost btn--sm" href="/booking/@b.Reference">@Loc["MyTickets.ViewTicket"]</a>
+            <a class="btn btn--ghost btn--sm" href="/tickets/@(b.Reference).pdf" target="_blank">PDF</a>
+            @if (upcoming && IsCancellable(b, Clock.UtcNow))
+            {
+                <button class="btn btn--ghost btn--sm" @onclick="() => OpenCancel(b)">@Loc["MyTickets.Cancel"]</button>
+            }
+        </div>
+    </div>
+</article>;
+
+    private static string StatusBadge(BookingStatus s) => s switch
+    {
+        BookingStatus.Confirmed => "badge--success",
+        BookingStatus.Cancelled => "badge--danger",
+        BookingStatus.Expired => "badge",
+        _ => "badge--warning"
+    };
+
+    private static string PayBadge(PaymentStatus s) => s switch
+    {
+        PaymentStatus.Verified => "badge--success",
+        PaymentStatus.Rejected => "badge--danger",
+        PaymentStatus.Refunded => "badge--info",
+        _ => "badge--warning"
+    };
+}

@@ -32,7 +32,7 @@ public sealed class TripService(
 {
     public async Task<TripPage> QueryAsync(
         Guid? routeId = null, DateOnly? serviceDate = null, TripStatus? status = null,
-        bool upcomingOnly = false, int page = 1, int pageSize = 40, CancellationToken ct = default)
+        bool upcomingOnly = false, int page = 1, int pageSize = 20, CancellationToken ct = default)
     {
         await using var db = await dbFactory.CreateDbContextAsync(ct);
         var query = db.Trips
@@ -141,10 +141,19 @@ public sealed class TripService(
         if (busChanged)
         {
             trip.BusId = input.BusId;
+
+            // trip is already tracked, so a plain trip.Seats.Add(new …) would have EF's
+            // fixup mistake these client-keyed rows for existing ones and try to UPDATE
+            // them (0 rows affected). AddRange on the DbSet forces them Added.
             db.TripSeats.RemoveRange(trip.Seats);
             trip.Seats.Clear();
-            foreach (var seat in bus!.SeatMap.Seats)
-                trip.Seats.Add(new TripSeat { SeatNumber = seat.Number, SeatType = seat.Type, Status = SeatStatus.Available });
+            db.TripSeats.AddRange(bus!.SeatMap.Seats.Select(seat => new TripSeat
+            {
+                TripId = trip.Id,
+                SeatNumber = seat.Number,
+                SeatType = seat.Type,
+                Status = SeatStatus.Available
+            }));
         }
 
         await db.SaveChangesAsync(ct);

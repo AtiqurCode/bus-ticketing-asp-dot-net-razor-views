@@ -25,6 +25,9 @@
 
   <ItemGroup>
     <Content Update="Data\Seed\bangladesh-locations.json" CopyToOutputDirectory="PreserveNewest" />
+    <!-- Baked into the assembly so QuestPDF finds the Bengali face regardless of
+         how the app is packaged (a plain Content copy never survived publish). -->
+    <EmbeddedResource Include="Resources\Fonts\*.ttf" />
   </ItemGroup>
 
 </Project>

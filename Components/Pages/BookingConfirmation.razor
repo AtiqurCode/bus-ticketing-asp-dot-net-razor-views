@@ -25,7 +25,7 @@
 
         <div class="ticketwrap">
             <div class="statusbanner statusbanner--@BannerKind()">
-                <div class="statusbanner__icon" aria-hidden="true">@BannerIcon()</div>
+                <div class="statusbanner__icon" aria-hidden="true"><Icon Name="@BannerIcon()" Size="20" /></div>
                 <div>
                     <strong>@BannerTitle()</strong>
                     <p>@BannerBody()</p>
@@ -91,6 +91,7 @@
             }
 
             <div class="confirm-actions">
+                <a class="btn" href="/tickets/@(b.Reference).pdf" target="_blank">@Loc["Confirm.DownloadPdf"]</a>
                 <a class="btn btn--ghost" href="/my-tickets?phone=@Uri.EscapeDataString(b.PassengerPhone)">@Loc["Confirm.ViewMyTickets"]</a>
                 <a class="btn btn--ghost" href="/">@Loc["NotFound.Home"]</a>
             </div>
@@ -113,7 +114,7 @@
         _ => _booking.PaymentStatus == PaymentStatus.Rejected ? "bad" : "wait"
     };
 
-    private string BannerIcon() => BannerKind() switch { "ok" => "✓", "bad" => "!", _ => "…" };
+    private string BannerIcon() => BannerKind() switch { "ok" => "check", "bad" => "x", _ => "clock" };
 
     private string BannerTitle() => _booking!.Status switch
     {

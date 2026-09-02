@@ -44,6 +44,10 @@ public class AppSettings
 
     public string SupportPhone { get; set; } = "16xxx";
 
+    /// <summary>Public URL the site is reachable at, e.g. https://ticketbari.example.
+    /// Used to build links in SMS messages. Left blank until the domain is live.</summary>
+    public string? PublicBaseUrl { get; set; }
+
     public DateTimeOffset? UpdatedAt { get; set; }
 
     public IEnumerable<int> IntervalOptions() =>

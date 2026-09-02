@@ -21,6 +21,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<CancellationRule> CancellationRules => Set<CancellationRule>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<AppSettings> AppSettings => Set<AppSettings>();
+    public DbSet<SmsLog> SmsLogs => Set<SmsLog>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
