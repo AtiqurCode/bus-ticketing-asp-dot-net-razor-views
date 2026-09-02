@@ -1,0 +1,63 @@
+# TicketBari — full stack in two containers.
+#
+#   cp .env.example .env      # then edit the passwords
+#   docker compose up --build
+#
+# App    → http://localhost:8080   (staff sign-in at /staff/login)
+# DB     → localhost:5433          (postgres/…, for psql or a GUI)
+#
+# The app creates the `busticketing` database on first boot (UTF-8), applies
+# migrations, and seeds locations + the super admin — same path as running on
+# host Postgres.
+
+name: ticketbari
+
+services:
+  db:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-busticketing_dev}
+      # Keep the data one level below the mount point so the volume root is
+      # never the data dir — portable across postgres image layouts.
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "${DB_PORT:-5433}:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  app:
+    build:
+      context: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      ConnectionStrings__Postgres: "Host=db;Port=5432;Database=busticketing;Username=postgres;Password=${POSTGRES_PASSWORD:-busticketing_dev};Include Error Detail=false"
+      Seed__SuperAdminPassword: ${SUPERADMIN_PASSWORD:-ChangeMe!2026}
+      # true → load sample buses/routes/schedules + a week of trips on first boot
+      Seed__DemoData: ${SEED_DEMO:-false}
+      # ASPNETCORE_ENVIRONMENT=Production, HTTP port 8080,
+      # Hosting__HttpsRedirection=false and DataProtection__KeyPath are in the image.
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    volumes:
+      - dp-keys:/app/keys
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/healthz/ready"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+
+volumes:
+  db-data:
+  dp-keys:

@@ -1,0 +1,33 @@
+# Build outputs — never copy host artifacts into the image (stale RID, wrong OS)
+**/bin/
+**/obj/
+**/out/
+**/publish/
+
+# VCS / IDE / CI
+**/.git/
+**/.github/
+**/.vs/
+**/.vscode/
+**/.idea/
+**/*.user
+**/*.suo
+
+# Docker's own files
+Dockerfile*
+.dockerignore
+docker-compose*.yml
+compose*.yaml
+
+# Local-only config and secrets
+**/appsettings.Local.json
+**/appsettings.*.Local.json
+**/*.pfx
+
+# Docs and scratch — not needed to build
+docs/
+*.md
+
+# OS noise
+**/.DS_Store
+**/Thumbs.db

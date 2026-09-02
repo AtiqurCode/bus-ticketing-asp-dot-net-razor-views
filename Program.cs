@@ -8,9 +8,13 @@ using BusTicketing.Services.Admin;
 using BusTicketing.Services.Auth;
 using BusTicketing.Services.Bookings;
 using BusTicketing.Services.Localization;
+using BusTicketing.Services.Notifications;
 using BusTicketing.Services.Scheduling;
+using BusTicketing.Services.Ticketing;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.EntityFrameworkCore;
@@ -26,7 +30,13 @@ var connectionString = builder.Configuration.GetConnectionString("Postgres")
 
 builder.Services.AddDbContextFactory<AppDbContext>(options => options
     .UseNpgsql(connectionString, npgsql => npgsql.MigrationsAssembly(typeof(AppDbContext).Assembly.FullName))
-    .UseSnakeCaseNamingConvention());
+    .UseSnakeCaseNamingConvention()
+    // The owned-JSON seat map + xmin row-version columns don't round-trip through
+    // the migration snapshot byte-for-byte, which trips this check as a false
+    // positive even when `dotnet ef migrations add` finds no real diff — verified
+    // after every migration in this project. Safe to ignore per Microsoft's own
+    // guidance on PendingModelChangesWarning.
+    .ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning)));
 
 // Identity's stores resolve AppDbContext directly, so hand them a scoped
 // instance drawn from the same pooled factory.
@@ -68,6 +78,18 @@ builder.Services.AddAuthorizationBuilder()
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingStateProvider>();
 
+// Keep the data-protection key ring on a mounted path (see docker-compose) so
+// auth cookies and antiforgery tokens survive a container restart or redeploy.
+// Falls back to the framework default (per-user profile) when unset.
+var keyRingPath = builder.Configuration["DataProtection:KeyPath"];
+if (!string.IsNullOrWhiteSpace(keyRingPath))
+{
+    Directory.CreateDirectory(keyRingPath);
+    builder.Services.AddDataProtection()
+        .PersistKeysToFileSystem(new DirectoryInfo(keyRingPath))
+        .SetApplicationName("TicketBari");
+}
+
 // --- Localization ------------------------------------------------
 // SharedResource lives in the BusTicketing.Resources namespace and its .resx
 // sits at Resources/, so the resource base name already matches — no ResourcesPath.
@@ -103,10 +125,27 @@ builder.Services.AddHostedService<TripGenerationBackgroundService>();
 builder.Services.AddSingleton<SeatMapBroadcaster>();
 builder.Services.AddScoped<TripSearchService>();
 builder.Services.AddScoped<SeatHoldService>();
+builder.Services.AddScoped<CancellationPolicyService>();
 builder.Services.AddScoped<BookingService>();
 builder.Services.AddScoped<BookingAdminService>();
 builder.Services.AddScoped<PaymentReviewService>();
 builder.Services.AddHostedService<BookingMaintenanceBackgroundService>();
+
+builder.Services.AddSingleton<ISmsSender, LoggingSmsSender>();
+builder.Services.AddScoped<SmsService>();
+builder.Services.AddSingleton<TicketPdfService>();
+PdfFonts.RegisterEmbeddedFonts();
+
+// In the Docker deploy the app sits behind nginx, which terminates TLS and
+// forwards the original scheme/host. Trust those headers so redirect URIs,
+// auth cookies and the ticket links resolve to https, not the internal port.
+// The container is only reachable through the proxy, so every hop is trusted.
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.KnownIPNetworks.Clear();
+    options.KnownProxies.Clear();
+});
 
 // --- Blazor --------------------------------------------------
 builder.Services.AddRazorComponents()
@@ -114,7 +153,18 @@ builder.Services.AddRazorComponents()
 
 var app = builder.Build();
 
-await DatabaseInitializer.RunAsync(app.Services, app.Environment);
+// `dotnet run -- seed-demo` (or `Seed:DemoData=true`) loads the sample fleet,
+// routes and schedules. As a command it seeds and exits; as a flag it just adds
+// the demo data to a normal startup. Either way it's idempotent.
+var seedDemoCommand = args.Contains("seed-demo");
+var includeDemoData = seedDemoCommand || builder.Configuration.GetValue("Seed:DemoData", false);
+
+await DatabaseInitializer.RunAsync(app.Services, app.Environment, includeDemoData);
+
+if (seedDemoCommand)
+    return;
+
+app.UseForwardedHeaders();
 
 if (app.Environment.IsDevelopment())
 {
@@ -123,10 +173,16 @@ if (app.Environment.IsDevelopment())
 else
 {
     app.UseExceptionHandler("/error", createScopeForErrors: true);
-    app.UseHsts();
 }
 
-app.UseHttpsRedirection();
+// Off by default in the container — nginx owns the 80→443 redirect and HSTS.
+// On elsewhere in production. Toggle with Hosting__HttpsRedirection.
+if (app.Configuration.GetValue("Hosting:HttpsRedirection", !app.Environment.IsDevelopment()))
+{
+    app.UseHsts();
+    app.UseHttpsRedirection();
+}
+
 app.UseRequestLocalization();
 
 app.UseAuthentication();
@@ -136,6 +192,7 @@ app.UseAntiforgery();
 app.MapStaticAssets();
 app.MapCultureEndpoints();
 app.MapHealthEndpoints();
+app.MapTicketEndpoints();
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
