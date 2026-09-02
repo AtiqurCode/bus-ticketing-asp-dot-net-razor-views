@@ -13,6 +13,7 @@ notes on how it was built are in [`docs/build-log.md`](docs/build-log.md).
 
 ## Contents
 
+- [Screenshots](#screenshots)
 - [Stack](#stack)
 - [Run with Docker](#run-with-docker) — one command, nothing to install
 - [Run locally](#run-locally) — for development
@@ -23,6 +24,48 @@ notes on how it was built are in [`docs/build-log.md`](docs/build-log.md).
 - [Architecture notes](#architecture-notes)
 - [Database & migrations](#database--migrations)
 - [Deploying to a VPS](#deploying-to-a-vps)
+
+---
+
+## Screenshots
+
+### Booking — no account, just a phone number
+
+The customer flow, start to ticket:
+
+**1. Find a bus** — pick from / to and a date on the landing page.
+
+![Landing page](public/images/1.png)
+
+**2. Choose the departure** — results for the day with a date strip and live seat counts.
+
+![Search results](public/images/2.png)
+
+**3. Pick seats on a live map** — the choice is held for a few minutes while you check out; a countdown shows how long is left, and other people see the seat as taken in real time.
+
+![Seat selection](public/images/3.png)
+
+**4. Passenger details and payment** — name and phone (email optional), then pay from a mobile wallet (bKash / Nagad / Rocket) with the transaction ID, or reserve and pay at the counter.
+
+![Passenger and payment](public/images/4.png)
+
+**5. Get the ticket** — a reference with a QR code, a status banner while an online payment is verified, and a downloadable PDF.
+
+![Booking confirmation](public/images/5.png)
+
+**6. Come back any time** — "My tickets" looks up every past and upcoming trip by phone number, to re-download a ticket or cancel within policy.
+
+![My tickets](public/images/6.png)
+
+### Back office
+
+**Dashboard** — the day at a glance: bookings and revenue, payments waiting for a decision, departures in the next 24 hours, unpaid holds, plus fleet counts.
+
+![Admin dashboard](public/images/7.png)
+
+**Trips** — every bookable departure the recurring-schedule engine generated from the templates, filterable by route, date and status.
+
+![Admin trips list](public/images/8.png)
 
 ---
 
