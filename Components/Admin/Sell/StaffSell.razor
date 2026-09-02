@@ -98,6 +98,12 @@ else if (_step == Step.Seats && _context is not null)
         <aside class="book__side">
             <div class="summary card"><div class="card__body">
                 <h3>Selection</h3>
+                @if (_holdRemaining is { } left)
+                {
+                    <div class="holdclock @(left.TotalSeconds < 60 ? "is-low" : "")">
+                        Seats held for <strong>@left.ToString(@"m\:ss")</strong>
+                    </div>
+                }
                 @if (_selected.Count == 0)
                 {
                     <p class="muted text-sm">Tap seats on the map.</p>
@@ -107,7 +113,7 @@ else if (_step == Step.Seats && _context is not null)
                     <div class="summary__row"><span>Seats</span><span class="summary__seats">@string.Join(", ", _selected)</span></div>
                     <div class="summary__total"><span>Total</span><span>৳@((_context.Fare * _selected.Count).ToString("0"))</span></div>
                 }
-                <button class="btn btn--block" disabled="@(_selected.Count == 0 || _busy)" @onclick="() => _step = Step.Details">Continue</button>
+                <button class="btn btn--block" disabled="@(_selected.Count == 0 || _busy)" @onclick="GoToDetails">Continue</button>
             </div></div>
         </aside>
     </div>
@@ -116,6 +122,12 @@ else if (_step == Step.Details && _context is not null)
 {
     <div class="card form-card">
         <div class="card__body">
+            @if (_holdRemaining is { } left)
+            {
+                <div class="holdclock @(left.TotalSeconds < 60 ? "is-low" : "")" style="margin-bottom: var(--space-4);">
+                    Seats held for <strong>@left.ToString(@"m\:ss")</strong>
+                </div>
+            }
             <EditForm Model="_form" OnValidSubmit="Confirm">
                 <DataAnnotationsValidator />
                 <div class="form-grid">
@@ -203,6 +215,8 @@ else if (_step == Step.Details && _context is not null)
     private string? _seatError;
     private string? _confirmError;
     private IDisposable? _subscription;
+    private CancellationTokenSource? _ticker;
+    private TimeSpan? _holdRemaining;
     private Guid _staffId;
     private readonly SellForm _form = new();
 
@@ -249,12 +263,73 @@ else if (_step == Step.Details && _context is not null)
         });
         await LoadContext();
         _step = Step.Seats;
+        StartTicker();
     }
 
     private async Task LoadContext()
     {
         _context = await Holds.GetContextAsync(_tripId, _holdToken);
         _selected = _context?.MySeatNumbers.ToList() ?? [];
+        UpdateRemaining();
+    }
+
+    private async Task GoToDetails()
+    {
+        if (_selected.Count == 0) return;
+        await Holds.ExtendAsync(_tripId, _holdToken);
+        await LoadContext();
+        _step = Step.Details;
+    }
+
+    private void StartTicker()
+    {
+        _ticker?.Cancel();
+        _ticker?.Dispose();
+        _ticker = new CancellationTokenSource();
+        _ = RunTickerAsync(_ticker.Token);
+    }
+
+    private void StopTicker()
+    {
+        _ticker?.Cancel();
+        _ticker?.Dispose();
+        _ticker = null;
+        _holdRemaining = null;
+    }
+
+    private async Task RunTickerAsync(CancellationToken ct)
+    {
+        try
+        {
+            using var timer = new PeriodicTimer(TimeSpan.FromSeconds(1));
+            while (await timer.WaitForNextTickAsync(ct))
+            {
+                var before = _holdRemaining;
+                UpdateRemaining();
+                if (_holdRemaining is { Ticks: <= 0 } && before is { Ticks: > 0 })
+                {
+                    await Holds.ReleaseAllAsync(_tripId, _holdToken);
+                    await LoadContext();
+                    if (_step == Step.Details) _step = Step.Seats;
+                    _seatError = "Your seat hold expired — please choose the seats again.";
+                }
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (OperationCanceledException) { }
+    }
+
+    private void UpdateRemaining()
+    {
+        if (_context?.MyHoldExpiresAt is { } expiry)
+        {
+            var left = expiry - Clock.UtcNow;
+            _holdRemaining = left > TimeSpan.Zero ? left : TimeSpan.Zero;
+        }
+        else
+        {
+            _holdRemaining = null;
+        }
     }
 
     private async Task ToggleSeat(string seatNumber)
@@ -270,6 +345,7 @@ else if (_step == Step.Details && _context is not null)
 
     private async Task BackToSearch()
     {
+        StopTicker();
         await Holds.ReleaseAllAsync(_tripId, _holdToken);
         _subscription?.Dispose();
         _subscription = null;
@@ -311,6 +387,7 @@ else if (_step == Step.Details && _context is not null)
 
         if (result.Succeeded)
         {
+            StopTicker();
             _subscription?.Dispose();
             _subscription = null;
             Nav.NavigateTo($"/booking/{result.Value}");
@@ -323,12 +400,14 @@ else if (_step == Step.Details && _context is not null)
 
     public async ValueTask DisposeAsync()
     {
+        _ticker?.Cancel();
         _subscription?.Dispose();
         if (_tripId != Guid.Empty)
         {
             try { await Holds.ReleaseAllAsync(_tripId, _holdToken); }
             catch { }
         }
+        _ticker?.Dispose();
     }
 
     private sealed class SellForm
